@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PCA &ndash; STORAGE</title>
+<style>
+/* ── THEME TOKENS ── */
+:root {
+  --bg:#0f1117;--surface:#1a1d27;--card:#1e2130;--border:#2e3250;
+  --accent:#4f8ef7;--green:#3ecf7c;--red:#f75f5f;--yellow:#f7c948;
+  --text:#e4e8f0;--muted:#7b8099;--radius:14px;
+  --shadow:0 8px 28px #0006;
+}
+[data-theme="light"] {
+  --bg:#f0f2f8;--surface:#ffffff;--card:#ffffff;--border:#d0d5e8;
+  --accent:#2563eb;--green:#16a34a;--red:#dc2626;--yellow:#ca8a04;
+  --text:#1e2130;--muted:#64748b;
+  --shadow:0 4px 20px #0001;
+}
+
+/* ── RESET ── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;
+  min-height:100vh;padding:2rem 1rem;transition:background .25s,color .25s}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;
+  max-width:1200px;margin:0 auto 1.5rem}
+h1{font-size:1.7rem;font-weight:700}
+.subtitle{text-align:center;color:var(--muted);font-size:.9rem;margin-bottom:2rem}
+
+/* ── THEME TOGGLE ── */
+.theme-toggle{display:flex;align-items:center;gap:.5rem;cursor:pointer;
+  background:var(--surface);border:1px solid var(--border);border-radius:99px;
+  padding:.35rem .9rem;font-size:.8rem;color:var(--muted);
+  transition:all .2s;user-select:none}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.toggle-track{width:36px;height:20px;border-radius:99px;background:var(--border);
+  position:relative;transition:background .25s}
+.toggle-thumb{width:14px;height:14px;border-radius:50%;background:#fff;
+  position:absolute;top:3px;left:3px;transition:transform .25s,background .25s;
+  box-shadow:0 1px 3px #0003}
+[data-theme="light"] .toggle-track{background:var(--accent)}
+[data-theme="light"] .toggle-thumb{transform:translateX(16px)}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:.5rem;justify-content:center;margin-bottom:2rem;flex-wrap:wrap}
+.tab-btn{padding:.5rem 1.4rem;border-radius:99px;border:2px solid var(--border);
+  background:transparent;color:var(--muted);cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.tab-content{display:none}.tab-content.active{display:block}
+
+/* ── FLASHCARDS ── */
+.deck-header{text-align:center;color:var(--muted);margin-bottom:1.5rem;font-size:.85rem}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.2rem}
+.flashcard{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.flashcard:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.card-header{display:flex;align-items:center;justify-content:space-between;
+  padding:.75rem 1rem;border-bottom:1px solid var(--border);background:var(--surface)}
+.card-title{font-weight:700;font-size:.95rem}
+.badge{font-size:.7rem;padding:.2rem .6rem;border-radius:99px;
+  background:var(--border);color:var(--accent)}
+.card-body{padding:1.1rem}
+.card-front p{font-size:.85rem;color:var(--muted);margin-bottom:.5rem}
+.card-front h3{font-size:1rem;font-weight:600;line-height:1.4}
+.card-back{display:none}
+.flashcard.flipped .card-front{display:none}
+.flashcard.flipped .card-back{display:block}
+.field{margin-bottom:.75rem}
+.field-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--accent);margin-bottom:.25rem}
+.field-value{font-size:.82rem;color:var(--text);line-height:1.5}
+.flip-hint{font-size:.7rem;color:var(--muted);text-align:right;margin-top:.6rem}
+.scenario-box{background:var(--surface);border-left:3px solid var(--yellow);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;margin-top:.5rem;font-size:.82rem}
+.answer-box{background:var(--surface);border-left:3px solid var(--green);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;margin-top:.4rem;font-size:.82rem}
+
+/* ── Q&A ── */
+.qa-grid{display:grid;gap:1.2rem}
+.qa-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.qa-header{display:flex;align-items:center;justify-content:space-between;
+  padding:.7rem 1rem;background:var(--surface);border-bottom:1px solid var(--border)}
+.qa-label{font-size:.8rem;font-weight:700;color:var(--accent)}
+.qa-url{font-size:.7rem;color:var(--muted);text-decoration:none}
+.qa-url:hover{color:var(--accent)}
+.qa-body{padding:1rem}
+.qa-question{font-size:.9rem;line-height:1.5;margin-bottom:.8rem;font-weight:500}
+.choices{list-style:none;display:grid;gap:.4rem}
+.choice{padding:.5rem .8rem;border-radius:8px;border:1px solid var(--border);
+  font-size:.82rem;cursor:pointer;transition:all .2s;user-select:none}
+.choice:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.choice.correct{background:color-mix(in srgb,var(--green) 12%,transparent);
+  border-color:var(--green);color:var(--green)}
+.choice.wrong{background:color-mix(in srgb,var(--red) 12%,transparent);
+  border-color:var(--red);color:var(--red)}
+.explanation{display:none;margin-top:.8rem;font-size:.82rem;line-height:1.5;
+  background:var(--surface);border-left:3px solid var(--accent);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;color:var(--muted)}
+.explanation.visible{display:block}
+
+/* ── STATS ── */
+.stats-bar{display:flex;gap:1rem;justify-content:center;margin-bottom:1.5rem;flex-wrap:wrap}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:.5rem 1.1rem;text-align:center;min-width:90px}
+.stat-num{font-size:1.4rem;font-weight:700}
+.stat-label{font-size:.7rem;color:var(--muted)}
+.stat.green .stat-num{color:var(--green)}
+.stat.red .stat-num{color:var(--red)}
+.stat.yellow .stat-num{color:var(--yellow)}
+</style>
+<script>
+(function(){
+  var t=localStorage.getItem('pca-theme')||
+    (window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');
+  document.documentElement.setAttribute('data-theme',t);
+})();
+</script>
+</head>
+<body>
+<div class="topbar">
+  <h1>PCA &mdash; STORAGE</h1>
+  <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+    <span id="theme-label">&#9728;&#65039; Light mode</span>
+  </button>
+</div>
+<p class="subtitle">High-signal patterns for the PCA exam.</p>
+<div class="tabs"><button class="tab-btn active" data-tab="flashcards" onclick="switchTab('flashcards')">&#128218; Flashcards</button><button class="tab-btn" data-tab="exam-qa" onclick="switchTab('exam-qa')">&#129514; Exam Q&amp;A</button></div>
+
+<div id="tab-flashcards" class="tab-content active">
+  <p class="deck-header">Showing 18 cards &mdash; click to flip</p>
+  <div class="cards-grid">
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cloud Storage Standard</span>
+    <span class="badge">Storage</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Storage class optimized for frequently accessed data with low latency and high availability.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Active content, website assets, mobile application files, analytics staging, and frequently read objects.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Archival or rarely accessed data where lower-cost cold storage classes are more appropriate.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Best performance for active object access vs. higher storage cost than colder storage classes.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use Standard when low-latency frequent access matters more than minimum storage cost. Apply the same encryption, IAM, and retention controls as with other storage classes.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">An application serves user-uploaded images and needs low-latency frequent access to them.</div><div class="answer-box">Store the objects in Cloud Storage Standard.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cloud Storage Nearline</span>
+    <span class="badge">Storage</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Lower-cost object storage class designed for data accessed infrequently, typically less than once per month.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Backups, monthly-access datasets, and data retained for business continuity with occasional retrieval.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Frequently accessed production content or workloads with constant reads.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Lower storage cost than Standard vs. retrieval charges and less suitability for frequent access.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Good choice when data is retained for protection or occasional analysis rather than daily operations. Combine with lifecycle policies to transition data automatically as it ages.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company keeps backup files that are rarely accessed but might need recovery within a short period.</div><div class="answer-box">Use Cloud Storage Nearline for lower-cost infrequently accessed backups.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cloud Storage Coldline</span>
+    <span class="badge">Storage</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Low-cost object storage class for data accessed very rarely, typically quarterly or less.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Disaster recovery copies, compliance retention, and long-lived backups that are seldom retrieved.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Data serving, active analytics inputs, or workloads needing frequent reads.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Much lower storage cost vs. higher retrieval sensitivity and poor fit for active access patterns.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use Coldline for low-access retention strategies and automated lifecycle transitions from warmer classes. Protect backup and recovery data with strict IAM and retention settings.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A business wants to store recovery copies that are expected to be accessed only a few times per year.</div><div class="answer-box">Use Cloud Storage Coldline.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cloud Storage Archive</span>
+    <span class="badge">Storage</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Lowest-cost archival object storage class for long-term retention of data that is very rarely accessed.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Compliance archives; legal retention; historical records; long-term preservation with minimal retrieval frequency.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Operational backups with regular restore testing, active content, or datasets requiring frequent retrieval.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Lowest storage cost for long-term retention vs. least suitable for frequent access.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Archive is ideal when retention duration is important and retrieval is extremely rare. Use retention policies, lifecycle rules, and encryption controls to protect archived content.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company must retain records for many years for compliance, but expects almost never to access them.</div><div class="answer-box">Use Cloud Storage Archive for long-term archival retention.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Lifecycle Management</span>
+    <span class="badge">Storage</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Policy-based automation that transitions, deletes, or manages objects in Cloud Storage according to age, version, or other conditions.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Storage cost optimization; backup retention enforcement; automatic class transitions; cleanup of temporary or stale data.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Manual object management at large scale or cases where no predictable retention logic exists.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Lower administrative burden and better cost control vs. the need to design policies carefully to avoid premature deletion or unexpected transitions.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Lifecycle rules reduce storage waste and help align retention with policy. Review rules carefully for compliance-sensitive buckets so data is not deleted too early.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company wants backup files to remain in Standard storage for 30 days, then move to Coldline, and later be deleted after the retention period ends.</div><div class="answer-box">Configure Cloud Storage lifecycle management rules.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Versioning</span>
+    <span class="badge">Storage</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Bucket feature that keeps noncurrent versions of objects when they are overwritten or deleted.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Protection against accidental overwrite or deletion; backup-like object retention; recovery of prior file versions.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Buckets where frequent object changes would create excessive cost without any recovery need.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better recovery from accidental changes vs. increased storage consumption and cost.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Enable versioning when recovery from object changes matters, especially for important datasets and configuration artifacts. Pair versioning with lifecycle rules to avoid indefinite accumulation of old versions.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">An important data file was accidentally overwritten and the team wants the ability to recover an earlier copy.</div><div class="answer-box">Enable object versioning on the bucket.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Retention Policies</span>
+    <span class="badge">Storage</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Bucket-level controls that enforce minimum retention periods so objects cannot be deleted before the required time.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Compliance requirements; legal hold strategies; regulated retention controls; protection against premature data deletion.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Temporary scratch buckets or workloads where data should be easily removed at any time.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Stronger compliance and deletion protection vs. less flexibility in data cleanup and lifecycle handling.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Retention policies help enforce governance and reduce accidental or unauthorized deletion. Apply them carefully because they can restrict operational cleanup until the retention period expires.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A regulated dataset must be stored for a fixed minimum period and must not be deletable before that deadline.</div><div class="answer-box">Apply a retention policy to the bucket.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Bucket Lock</span>
+    <span class="badge">Storage</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Mechanism that locks a retention policy so it cannot be reduced or removed, supporting immutable retention requirements.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Regulatory or legal retention requirements where immutability must be enforced.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Buckets that still need flexible retention adjustments or environments not yet ready to commit permanently to the retention rule.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Strong immutable compliance protection vs. loss of flexibility once the policy is locked.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Bucket Lock should be used only when the retention requirement is fully validated because it becomes difficult or impossible to reverse. It is a strong control for regulated archival storage.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">An organization must prove that retained records cannot be deleted or shortened before the mandatory retention period.</div><div class="answer-box">Use Bucket Lock to enforce immutable retention.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cloud Storage Transfer Service</span>
+    <span class="badge">Storage</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Managed data transfer service for moving data from other cloud providers, HTTP locations, or on-premises/object sources into Cloud Storage.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Scheduled or large-scale transfers into Cloud Storage; recurring migrations; managed movement of data from external locations.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Very small ad hoc transfers where manual copy methods are simpler, or high-speed physical migration of huge on-premises datasets where an appliance is better.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Managed automation and scheduling vs. less suitability for offline bulk transport of massive physical data volumes.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use managed transfer jobs to reduce operational effort and support repeatable ingestion. Secure source and destination access carefully and validate transfer schedules and overwrite behavior.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company wants to move data regularly from another storage location into Cloud Storage on a scheduled basis without building custom tooling.</div><div class="answer-box">Use Storage Transfer Service.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Transfer Appliance</span>
+    <span class="badge">Storage</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Physical appliance provided for securely moving very large volumes of on-premises data into Google Cloud when network transfer is too slow.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Petabyte-scale migrations; remote sites with limited bandwidth; one-time or infrequent bulk data import from on-premises environments.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Small datasets, recurring online synchronization, or situations where the network can move the data fast enough.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Faster bulk migration for very large offline transfers vs. added logistical handling compared with pure network-based transfer.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Best when bandwidth is the bottleneck for migration. Maintain chain-of-custody and secure handling practices for physical transport of sensitive data.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">An enterprise must migrate hundreds of terabytes from an on-premises data center but available network bandwidth would make online transfer take far too long.</div><div class="answer-box">Use Transfer Appliance for bulk physical data migration.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Default Encryption at Rest</span>
+    <span class="badge">Storage</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Automatic encryption of stored data at rest using Google-managed keys without customer action.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">General-purpose storage protection for all workloads, especially when default managed encryption satisfies security and compliance requirements.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Scenarios requiring customer-controlled key lifecycle, rotation, or explicit key ownership.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Strong built-in protection with minimal operational effort vs. less direct control over key management than customer-managed options.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Default encryption protects stored data automatically and should be treated as baseline protection, not the only security control. Use IAM and network restrictions alongside encryption.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A team wants stored data encrypted automatically without building a custom key management process.</div><div class="answer-box">Rely on Google’s default encryption at rest for supported storage services.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Customer-Managed Encryption Keys</span>
+    <span class="badge">Storage</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Encryption model where stored data is protected using keys that the customer controls through Cloud KMS.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Regulated workloads; compliance-driven environments; organizations requiring explicit control over encryption key usage and rotation.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Simple workloads where default encryption is sufficient and there is no need for customer-controlled keys.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Greater control and auditability vs. more operational responsibility for key access, rotation, and availability.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use customer-managed keys only when key control is a real requirement, because disabled or misconfigured keys can affect workload availability. Limit access to both stored data and the keys protecting it.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company must control the keys used to encrypt storage objects because of internal security policy and audit requirements.</div><div class="answer-box">Use customer-managed encryption keys with Cloud KMS.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Customer-Supplied Encryption Keys</span>
+    <span class="badge">Storage</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Encryption model where the customer supplies their own encryption key material for specific storage operations instead of having Google store and manage the key.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Specialized scenarios where strict external key custody is required and the organization accepts the added operational burden.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Most standard enterprise workloads, especially where operational simplicity and managed key lifecycle are preferred.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Maximum direct control over encryption key material vs. significant operational complexity and risk if keys are lost.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Only use customer-supplied keys when policy requires it and the team can safely manage the full key lifecycle. Losing the key can make the protected data unrecoverable.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">An organization requires full external custody of key material for a sensitive storage workflow.</div><div class="answer-box">Use customer-supplied encryption keys only if that strict requirement cannot be met with customer-managed keys.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Uniform Bucket-Level Access</span>
+    <span class="badge">Storage</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Access control mode that disables per-object ACLs and enforces access through bucket-level IAM policies only.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Simplified access governance; consistent enterprise security; buckets managed through centralized IAM practices.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Workloads that depend on object-level ACL patterns and cannot yet be redesigned around bucket-level IAM.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Simpler and more consistent access control vs. less granularity for legacy object-level permission models.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Uniform bucket-level access reduces permission complexity and aligns better with modern IAM governance. It is usually preferred for enterprise-managed storage environments.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company wants simpler, more centralized access control for storage buckets and wants to avoid ACL sprawl.</div><div class="answer-box">Enable uniform bucket-level access and manage permissions with IAM.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Signed URLs</span>
+    <span class="badge">Storage</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Time-limited URLs that grant temporary access to specific Cloud Storage objects without requiring the user to have direct Google Cloud credentials.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Controlled temporary downloads or uploads; external sharing; application-mediated object access for users outside the cloud environment.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Broad long-term access patterns better handled through IAM roles or bucket policy design.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Flexible temporary access without broad IAM grants vs. the need to manage expiry and URL distribution securely.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Signed URLs are useful for short-lived access to specific objects while keeping the bucket otherwise private. Use short expirations and only grant the minimum required action.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A private application needs to let an external user download a single object securely for a limited time.</div><div class="answer-box">Generate a signed URL for temporary object access.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Object Storage for Static Content</span>
+    <span class="badge">Storage</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Pattern of serving static files such as images, CSS, JavaScript, and downloads from managed object storage instead of application servers.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Static websites; media delivery; download portals; offloading repeated static requests from compute resources.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Dynamic application logic, transactional processing, or workloads needing local file system semantics.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Lower operational overhead and scalable static delivery vs. not being suitable for dynamic server-side execution.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Offloading static content to object storage can reduce compute cost and simplify scaling. Protect private content with signed access patterns or appropriate bucket policies.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A web application’s app servers are overloaded serving images and downloadable assets that rarely change.</div><div class="answer-box">Move the static content to Cloud Storage and serve it from object storage.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Backup and Archive Storage Design</span>
+    <span class="badge">Storage</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Storage architecture pattern that places backups and long-lived retention data into the appropriate object storage classes based on access and compliance needs.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Disaster recovery backups; compliance archives; long-term retention; operational backup repositories.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Active datasets requiring frequent low-latency reads or transactional updates.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Lower cost and strong durability vs. slower or less economical retrieval for archived and cold data.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Match backup recovery objectives with storage class choice, versioning, retention, and lifecycle policies. Ensure archives are protected from accidental deletion and unauthorized access.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A business needs durable backup storage with low cost, plus the ability to keep records for many years under a retention policy.</div><div class="answer-box">Use Cloud Storage with the appropriate cold storage classes, lifecycle rules, and retention controls.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Storage Class Selection</span>
+    <span class="badge">Storage</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Decision process for choosing among Standard, Nearline, Coldline, and Archive based on access frequency, retrieval expectations, and retention duration.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Any object storage design where cost optimization depends on actual data access behavior.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Choosing storage classes without understanding how often data will be read or restored.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Correct storage class selection minimizes cost while preserving needed availability and access behavior; poor selection causes waste or retrieval friction.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Reassess storage class over time as data ages and access patterns change. Combine class selection with lifecycle policies, IAM, and encryption to create a complete storage strategy.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">One dataset is accessed daily, another monthly, another only for disaster recovery, and another almost never for long-term compliance retention.</div><div class="answer-box">Use Standard for daily access, Nearline for infrequent monthly access, Coldline for rare recovery-oriented access, and Archive for very rare long-term retention.</div></div>
+    </div>
+  </div>
+</div></div>
+</div>
+
+<div id="tab-exam-qa" class="tab-content">
+  <div class="stats-bar">
+    <div class="stat green"><div class="stat-num" id="s-correct">0</div><div class="stat-label">Correct</div></div>
+    <div class="stat red"><div class="stat-num" id="s-wrong">0</div><div class="stat-label">Wrong</div></div>
+    <div class="stat yellow"><div class="stat-num" id="s-total">0</div><div class="stat-label">Total</div></div>
+  </div>
+  <div class="qa-grid">
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 8</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company wants to track whether someone is present in a meeting room reserved for a scheduled meeting. There are 1000 meeting rooms across 5 offices on 3 continents. Each room is equipped with a motion sensor that reports its status every second. The data from the motion detector includes only a sensor ID and several different discrete items of information. Analysts will use this data, together with information about account owners and office locations. Which database type should you use?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Flat file</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.NoSQL</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Relational</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Blobstore</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 17</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are creating a solution to remove backup files older than 90 days from your backup Cloud Storage bucket. You want to optimize ongoing Cloud Storage spend. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Write a lifecycle management rule in XML and push it to the bucket with gsutil</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Write a lifecycle management rule in JSON and push it to the bucket with gsutil</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Schedule a cron script using gsutil ls ג€&quot;lr gs://backups/** to find and remove items older than 90 days</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Schedule a cron script using gsutil ls ג€&quot;l gs://backups/** to find and remove items older than 90 days and schedule it with cron</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 42</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are using Cloud Shell and need to install a custom utility for use in a few weeks. Where can you store the file so it is in the default execution path and persists across sessions?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.~/bin</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Cloud Storage</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C./google/scripts</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D./usr/local/bin</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 51</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You have found an error in your App Engine application caused by missing Cloud Datastore indexes. You have created a YAML file with the required indexes and want to deploy these new indexes to Cloud Datastore. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Point gcloud datastore create-indexes to your configuration file</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Upload the configuration file to App Engine&#x27;s default Cloud Storage bucket, and have App Engine detect the new indexes</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.In the GCP Console, use Datastore Admin to delete the current indexes and upload the new configuration file</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create an HTTP request to the built-in python module to send the index configuration file to your application</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 55</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company is moving 75 TB of data into Google Cloud. You want to use Cloud Storage and follow Google-recommended practices. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Move your data onto a Transfer Appliance. Use a Transfer Appliance Rehydrator to decrypt the data into Cloud Storage.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Move your data onto a Transfer Appliance. Use Cloud Dataprep to decrypt the data into Cloud Storage.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Install gsutil on each server that contains data. Use resumable transfers to upload the data into Cloud Storage.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Install gsutil on each server containing data. Use streaming transfers to upload the data into Cloud Storage.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 58</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You have developed an application using Cloud ML Engine that recognizes famous paintings from uploaded images. You want to test the application and allow specific people to upload images for the next 24 hours. Not all users have a Google Account. How should you have users upload images?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Have users upload the images to Cloud Storage. Protect the bucket with a password that expires after 24 hours.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Have users upload the images to Cloud Storage using a signed URL that expires after 24 hours.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Create an App Engine web application where users can upload images. Configure App Engine to disable the application after 24 hours. Authenticate users via Cloud Identity.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create an App Engine web application where users can upload images for the next 24 hours. Authenticate users via Cloud Identity.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 65</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You need to upload files from your on-premises environment to Cloud Storage. You want the files to be encrypted on Cloud Storage using customer-supplied encryption keys. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Supply the encryption key in a .boto configuration file. Use gsutil to upload the files.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Supply the encryption key using gcloud config. Use gsutil to upload the files to that bucket.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Use gsutil to upload the files, and use the flag --encryption-key to supply the encryption key.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Use gsutil to create a bucket, and use the flag --encryption-key to supply the encryption key. Use gsutil to upload the files to that bucket.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 95</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You have an application that makes HTTP requests to Cloud Storage. Occasionally the requests fail with HTTP status codes of 5xx and 429. How should you handle these types of errors?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Use gRPC instead of HTTP for better performance.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Implement retry logic using a truncated exponential backoff strategy.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Make sure the Cloud Storage bucket is multi-regional for geo-redundancy.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Monitor https://status.cloud.google.com/feed.atom and only make requests if Cloud Storage is not reporting an incident.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 97</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company creates rendering software which users can download from the company website. Your company has customers all over the world. You want to minimize latency for all your customers. You want to follow Google-recommended practices. How should you store the files?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Save the files in a Multi-Regional Cloud Storage bucket.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Save the files in a Regional Cloud Storage bucket, one bucket per zone of the region.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Save the files in multiple Regional Cloud Storage buckets, one bucket per zone per region.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Save the files in multiple Multi-Regional Cloud Storage buckets, one bucket per multi-region.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 98</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company acquired a healthcare startup and must retain its customers&#x27; medical information for up to 4 more years, depending on when it was created. Your corporate policy is to securely retain this data, and then delete it as soon as regulations allow. Which approach should you take?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Store the data in Google Drive and manually delete records as they expire.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Anonymize the data using the Cloud Data Loss Prevention API and store it indefinitely.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Store the data in Cloud Storage and use lifecycle management to delete files when they expire.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Store the data in Cloud Storage and run a nightly batch script that deletes all expired data.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 123</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You need to deploy a stateful workload on Google Cloud. The workload can scale horizontally, but each instance needs to read and write to the same POSIX filesystem. At high load, the stateful workload needs to support up to 100 MB/s of writes. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Use a persistent disk for each instance.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Use a regional persistent disk for each instance.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Create a Cloud Filestore instance and mount it in each instance.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create a Cloud Storage bucket and mount it in each instance using gcsfuse.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 143</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company is designing its data lake on Google Cloud and wants to develop different ingestion pipelines to collect unstructured data from different sources. After the data is stored in Google Cloud, it will be processed in several data pipelines to build a recommendation engine for end users on the website. The structure of the data retrieved from the source systems can change at any time. The data must be stored exactly as it was retrieved for reprocessing purposes in case the data structure is incompatible with the current processing pipelines. You need to design an architecture to support the use case after you retrieve the data. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Send the data through the processing pipeline, and then store the processed data in a BigQuery table for reprocessing.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Store the data in a BigQuery table. Design the processing pipelines to retrieve the data from the table.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Send the data through the processing pipeline, and then store the processed data in a Cloud Storage bucket for reprocessing.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Store the data in a Cloud Storage bucket. Design the processing pipelines to retrieve the data from the bucket.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 146</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company wants to migrate their 10-TB on-premises database export into Cloud Storage. You want to minimize the time it takes to complete this activity, the overall cost, and database load. The bandwidth between the on-premises environment and Google Cloud is 1 Gbps. You want to follow Google-recommended practices. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Develop a Dataflow job to read data directly from the database and write it into Cloud Storage.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Use the Data Transfer appliance to perform an offline migration.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Use a commercial partner ETL solution to extract the data from the on-premises database and upload it into Cloud Storage.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Compress the data and upload it with gsutil -m to enable multi-threaded copy.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 149</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your organization has stored sensitive data in a Cloud Storage bucket. For regulatory reasons, your company must be able to rotate the encryption key used to encrypt the data in the bucket. The data will be processed in Dataproc. You want to follow Google-recommended practices for security. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Create a key with Cloud Key Management Service (KMS). Encrypt the data using the encrypt method of Cloud KMS.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Create a key with Cloud Key Management Service (KMS). Set the encryption key on the bucket to the Cloud KMS key.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Generate a GPG key pair. Encrypt the data using the GPG key. Upload the encrypted data to the bucket.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Generate an AES-256 encryption key. Encrypt the data in the bucket using the customer-supplied encryption keys feature.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 152</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company is planning to upload several important files to Cloud Storage. After the upload is completed, they want to verify that the uploaded content is identical to what they have on-premises. You want to minimize the cost and effort of performing this check. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.1. Use Linux shasum to compute a digest of files you want to upload. 2. Use gsutil -m to upload all the files to Cloud Storage. 3. Use gsutil cp to download the uploaded files. 4. Use Linux shasum to compute a digest of the downloaded files. 5. Compare the hashes.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.1. Use gsutil -m to upload the files to Cloud Storage. 2. Develop a custom Java application that computes CRC32C hashes. 3. Use gsutil ls -L gs://[YOUR_BUCKET_NAME] to collect CRC32C hashes of the uploaded files. 4. Compare the hashes.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.1. Use gsutil -m to upload all the files to Cloud Storage. 2. Use gsutil cp to download the uploaded files. 3. Use Linux diff to compare the content of the files.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.1. Use gsutil -m to upload the files to Cloud Storage. 2. Use gsutil hash -c FILE_NAME to generate CRC32C hashes of all on-premises files. 3. Use gsutil ls -L gs://[YOUR_BUCKET_NAME] to collect CRC32C hashes of the uploaded files. 4. Compare the hashes.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 160</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">The application reliability team at your company this added a debug feature to their backend service to send all server events to Google Cloud Storage for eventual analysis. The event records are at least 50 KB and at most 15 MB and are expected to peak at 3,000 events per second. You want to minimize data loss. Which process should you implement?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.ג€¢ Append metadata to file body ג€¢ Compress individual files ג€¢ Name files with serverName ג€&quot; Timestamp ג€¢ Create a new bucket if bucket is older than 1 hour and save individual files to the new bucket. Otherwise, save files to existing bucket.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.ג€¢ Batch every 10,000 events with a single manifest file for metadata ג€¢ Compress event files and manifest file into a single archive file ג€¢ Name files using serverName ג€&quot; EventSequence ג€¢ Create a new bucket if bucket is older than 1 day and save the single archive file to the new bucket. Otherwise, save the single archive file to existing bucket.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.ג€¢ Compress individual files ג€¢ Name files with serverName ג€&quot; EventSequence ג€¢ Save files to one bucket ג€¢ Set custom metadata headers for each object after saving</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.ג€¢ Append metadata to file body ג€¢ Compress individual files ג€¢ Name files with a random prefix pattern ג€¢ Save files to one bucket</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 170</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">One of your primary business objectives is being able to trust the data stored in your application. You want to log all changes to the application data. How can you design your logging system to verify authenticity of your logs?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Write the log concurrently in the cloud and on premises</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Use a SQL database and limit who can modify the log table</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Digitally sign each timestamp and log entry and store the signature</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create a JSON dump of each log entry and store it in Google Cloud Storage</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 172</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company has an application running on Compute Engine that allows users to play their favorite music. There are a fixed number of instances. Files are stored in Cloud Storage, and data is streamed directly to users. Users are reporting that they sometimes need to attempt to play popular songs multiple times before they are successful. You need to improve the performance of the application. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.1. Mount the Cloud Storage bucket using gcsfuse on all backend Compute Engine instances. 2. Serve music files directly from the backend Compute Engine instance.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.1. Create a Cloud Filestore NFS volume and attach it to the backend Compute Engine instances. 2. Download popular songs in Cloud Filestore. 3. Serve music files directly from the backend Compute Engine instance.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.1. Copy popular songs into CloudSQL as a blob. 2. Update application code to retrieve data from CloudSQL when Cloud Storage is overloaded.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.1. Create a managed instance group with Compute Engine instances. 2. Create a global load balancer and configure it with two backends: ג—‹ Managed instance group ג—‹ Cloud Storage bucket 3. Enable Cloud CDN on the bucket backend.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 174</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are working with a data warehousing team that performs data analysis. The team needs to process data from external partners, but the data contains personally identifiable information (PII). You need to process and store the data without storing any of the PIIE data. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Create a Dataflow pipeline to retrieve the data from the external sources. As part of the pipeline, use the Cloud Data Loss Prevention (Cloud DLP) API to remove any PII data. Store the result in BigQuery.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Create a Dataflow pipeline to retrieve the data from the external sources. As part of the pipeline, store all non-PII data in BigQuery and store all PII data in a Cloud Storage bucket that has a retention policy set.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Ask the external partners to upload all data on Cloud Storage. Configure Bucket Lock for the bucket. Create a Dataflow pipeline to read the data from the bucket. As part of the pipeline, use the Cloud Data Loss Prevention (Cloud DLP) API to remove any PII data. Store the result in BigQuery.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Ask the external partners to import all data in your BigQuery dataset. Create a dataflow pipeline to copy the data into a new table. As part of the Dataflow bucket, skip all data in columns that have PII data</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 175</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You want to allow your operations team to store logs from all the production projects in your Organization, without including logs from other projects. All of the production projects are contained in a folder. You want to ensure that all logs for existing and new production projects are captured automatically. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Create an aggregated export on the Production folder. Set the log sink to be a Cloud Storage bucket in an operations project.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Create an aggregated export on the Organization resource. Set the log sink to be a Cloud Storage bucket in an operations project.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Create log exports in the production projects. Set the log sinks to be a Cloud Storage bucket in an operations project.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create log exports in the production projects. Set the log sinks to be BigQuery datasets in the production projects, and grant IAM access to the operations team to run queries on the datasets.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 176</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company has an application that is running on multiple instances of Compute Engine. It generates 1 TB per day of logs. For compliance reasons, the logs need to be kept for at least two years. The logs need to be available for active query for 30 days. After that, they just need to be retained for audit purposes. You want to implement a storage solution that is compliant, minimizes costs, and follows Google-recommended practices. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.1. Install a Cloud Logging agent on all instances. 2. Create a sink to export logs into a regional Cloud Storage bucket. 3. Create an Object Lifecycle rule to move files into a Coldline Cloud Storage bucket after one month. 4. Configure a retention policy at the bucket level using bucket lock.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.1. Write a daily cron job, running on all instances, that uploads logs into a Cloud Storage bucket. 2. Create a sink to export logs into a regional Cloud Storage bucket. 3. Create an Object Lifecycle rule to move files into a Coldline Cloud Storage bucket after one month.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.1. Install a Cloud Logging agent on all instances. 2. Create a sink to export logs into a partitioned BigQuery table. 3. Set a time_partitioning_expiration of 30 days.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.1. Create a daily cron job, running on all instances, that uploads logs into a partitioned BigQuery table. 2. Set a time_partitioning_expiration of 30 days.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 180</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your operations team currently stores 10 TB of data in an object storage service from a third-party provider. They want to move this data to a Cloud Storage bucket as quickly as possible, following Google-recommended practices. They want to minimize the cost of this data migration. Which approach should they use?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Use the gsutil mv command to move the data.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Use the Storage Transfer Service to move the data.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Download the data to a Transfer Appliance, and ship it to Google.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Download the data to the on-premises data center, and upload it to the Cloud Storage bucket.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 7 | Question 1</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You need to optimize batch file transfers into Cloud Storage for Mountkirk Games&#x27; new Google Cloud solution. The batch files contain game statistics that need to be staged in Cloud Storage and be processed by an extract transform load (ETL) tool. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Use gsutil to batch move files in sequence.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Use gsutil to batch copy the files in parallel.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Use gsutil to extract the files as the first part of ETL.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Use gsutil to load the files as the last part of ETL.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 8 | Question 7</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">To speed up data retrieval, more vehicles will be upgraded to cellular connections and be able to transmit data to the ETL process. The current FTP process is error-prone and restarts the data transfer from the start of the file when connections fail, which happens often. You want to improve the reliability of the solution and minimize data transfer time on the cellular connections. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Use one Google Container Engine cluster of FTP servers. Save the data to a Multi-Regional bucket. Run the ETL process using data in the bucket</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Use multiple Google Container Engine clusters running FTP servers located in different regions. Save the data to Multi-Regional buckets in US, EU, and Asia. Run the ETL process using the data in the bucket</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Directly transfer the files to different Google Cloud Multi-Regional Storage bucket locations in US, EU, and Asia using Google APIs over HTTP(S). Run the ETL process using the data in the bucket</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Directly transfer the files to a different Google Cloud Regional Storage bucket location in US, EU, and Asia using Google APIs over HTTP(S). Run the ETL process to retrieve the data from each Regional bucket</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 8 | Question 8</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">TerramEarth&#x27;s 20 million vehicles are scattered around the world. Based on the vehicle&#x27;s location, its telemetry data is stored in a Google Cloud Storage (GCS) regional bucket (US, Europe, or Asia). The CTO has asked you to run a report on the raw telemetry data to determine why vehicles are breaking down after 100 K miles. You want to run this job on all the data. What is the most cost-effective way to run this job?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Move all the data into 1 zone, then launch a Cloud Dataproc cluster to run the job</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Move all the data into 1 region, then launch a Google Cloud Dataproc cluster to run the job</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Launch a cluster in each region to preprocess and compress the raw data, then move the data into a multi-region bucket and use a Dataproc cluster to finish the job</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Launch a cluster in each region to preprocess and compress the raw data, then move the data into a region bucket and use a Cloud Dataproc cluster to finish the job</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 8 | Question 9</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">TerramEarth has equipped all connected trucks with servers and sensors to collect telemetry data. Next year they want to use the data to train machine learning models. They want to store this data in the cloud while reducing costs. What should they do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Have the vehicle&#x27;s computer compress the data in hourly snapshots, and store it in a Google Cloud Storage (GCS) Nearline bucket</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Push the telemetry data in real-time to a streaming dataflow job that compresses the data, and store it in Google BigQuery</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Push the telemetry data in real-time to a streaming dataflow job that compresses the data, and store it in Cloud Bigtable</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Have the vehicle&#x27;s computer compress the data in hourly snapshots, and store it in a GCS Coldline bucket</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 9 | Question 1</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the TerramEarth case study. To be compliant with European GDPR regulation, TerramEarth is required to delete data generated from its European customers after a period of 36 months when it contains personal data. In the new architecture, this data will be stored in both Cloud Storage and BigQuery. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Create a BigQuery table for the European data, and set the table retention period to 36 months. For Cloud Storage, use gsutil to enable lifecycle management using a DELETE action with an Age condition of 36 months.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Create a BigQuery table for the European data, and set the table retention period to 36 months. For Cloud Storage, use gsutil to create a SetStorageClass to NONE action when with an Age condition of 36 months.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Create a BigQuery time-partitioned table for the European data, and set the partition expiration period to 36 months. For Cloud Storage, use gsutil to enable lifecycle management using a DELETE action with an Age condition of 36 months.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Create a BigQuery time-partitioned table for the European data, and set the partition expiration  period to 36 months. For Cloud Storage, use gsutil to create a SetStorageClass to NONE action with an Age condition of 36 months.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 9 | Question 2</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the TerramEarth case study. TerramEarth has decided to store data files in Cloud Storage. You need to configure Cloud Storage lifecycle rule to store 1 year of data and minimize file storage cost. Which two actions should you take?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Create a Cloud Storage lifecycle rule with Age: ג€30ג€, Storage Class: ג€Standardג€, and Action: ג€Set to Coldlineג€, and create a second GCS life-cycle rule with Age: ג€365ג€, Storage Class: ג€Coldlineג€, and Action: ג€Deleteג€.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Create a Cloud Storage lifecycle rule with Age: ג€30ג€, Storage Class: ג€Coldlineג€, and Action: ג€Set to Nearlineג€, and create a second GCS life-cycle rule with Age: ג€91ג€, Storage Class: ג€Coldlineג€, and Action: ג€Set to Nearlineג€.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Create a Cloud Storage lifecycle rule with Age: ג€90ג€, Storage Class: ג€Standardג€, and Action: ג€Set to Nearlineג€, and create a second GCS life-cycle rule with Age: ג€91ג€, Storage Class: ג€Nearlineג€, and Action: ג€Set to Coldlineג€.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create a Cloud Storage lifecycle rule with Age: ג€30ג€, Storage Class: ג€Standardג€, and Action: ג€Set to Coldlineג€, and create a second GCS life-cycle rule with Age: ג€365ג€, Storage Class: ג€Nearlineג€, and Action: ג€Deleteג€.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 10 | Question 6</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the TerramEarth case study. TerramEarth has about 1 petabyte (PB) of vehicle testing data in a private data center. You want to move the data to Cloud Storage for your machine learning team. Currently, a 1-Gbps interconnect link is available for you. The machine learning team wants to start using the data in a month. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Request Transfer Appliances from Google Cloud, export the data to appliances, and return the appliances to Google Cloud.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Configure the Storage Transfer service from Google Cloud to send the data from your data center to Cloud Storage.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Make sure there are no other users consuming the 1Gbps link, and use multi-thread transfer to upload the data to Cloud Storage.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Export files to an encrypted USB device, send the device to Google Cloud, and request an import of the data to Cloud Storage.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 11 | Question 2</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">At Dress4Win, an operations engineer wants to create a tow-cost solution to remotely archive copies of database backup files. The database files are compressed tar files stored in their current data center. How should he proceed?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Create a cron script using gsutil to copy the files to a Coldline Storage bucket.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Create a cron script using gsutil to copy the files to a Regional Storage bucket.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Create a Cloud Storage Transfer Service Job to copy the files to a Coldline Storage bucket.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create a Cloud Storage Transfer Service job to copy the files to a Regional Storage bucket.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 11 | Question 10</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You want to ensure Dress4Win&#x27;s sales and tax records remain available for infrequent viewing by auditors for at least 10 years. Cost optimization is your top priority. Which cloud services should you choose?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Google Cloud Storage Coldline to store the data, and gsutil to access the data.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Google Cloud Storage Nearline to store the data, and gsutil to access the data.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Google Bigtabte with US or EU as location to store the data, and gcloud to access the data.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.BigQuery to store the data, and a web server cluster in a managed instance group to access the data. Google Cloud SQL mirrored across two distinct regions to store the data, and a Redis cluster in a managed instance group to access the data.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div></div>
+</div>
+<script>
+/* ── THEME ── */
+(function(){
+  var saved = localStorage.getItem('pca-theme') ||
+    (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+
+function toggleTheme(){
+  var next = document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('pca-theme', next);
+  var btn = document.getElementById('theme-label');
+  if(btn) btn.textContent = next==='dark' ? '☀️ Light mode' : '🌙 Dark mode';
+}
+
+/* ── FLASHCARDS ── */
+function flip(el){ el.classList.toggle('flipped'); }
+
+/* ── Q&A ── */
+var score = {correct:0, wrong:0};
+function updateStats(){
+  document.getElementById('s-correct').textContent = score.correct;
+  document.getElementById('s-wrong').textContent   = score.wrong;
+  document.getElementById('s-total').textContent   =
+    document.querySelectorAll('.qa-card').length;
+}
+
+function answer(btn, isCorrect){
+  var card = btn.closest('.qa-card');
+  if(card.dataset.answered) return;
+  card.dataset.answered = '1';
+  card.querySelectorAll('.choice').forEach(function(c){
+    if(c.dataset.correct==='1') c.classList.add('correct');
+    else if(c===btn) c.classList.add('wrong');
+  });
+  card.querySelector('.explanation').classList.add('visible');
+  if(isCorrect) score.correct++; else score.wrong++;
+  updateStats();
+}
+
+/* ── TABS ── */
+function switchTab(name){
+  document.querySelectorAll('.tab-btn').forEach(function(b){
+    b.classList.toggle('active', b.dataset.tab===name);
+  });
+  document.querySelectorAll('.tab-content').forEach(function(t){
+    t.classList.toggle('active', t.id==='tab-'+name);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  updateStats();
+  var btn = document.getElementById('theme-label');
+  if(btn){
+    var current = document.documentElement.getAttribute('data-theme');
+    btn.textContent = current==='dark' ? '☀️ Light mode' : '🌙 Dark mode';
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PCA &ndash; Networking</title>
+<style>
+/* ── THEME TOKENS ── */
+:root {
+  --bg:#0f1117;--surface:#1a1d27;--card:#1e2130;--border:#2e3250;
+  --accent:#4f8ef7;--green:#3ecf7c;--red:#f75f5f;--yellow:#f7c948;
+  --text:#e4e8f0;--muted:#7b8099;--radius:14px;
+  --shadow:0 8px 28px #0006;
+}
+[data-theme="light"] {
+  --bg:#f0f2f8;--surface:#ffffff;--card:#ffffff;--border:#d0d5e8;
+  --accent:#2563eb;--green:#16a34a;--red:#dc2626;--yellow:#ca8a04;
+  --text:#1e2130;--muted:#64748b;
+  --shadow:0 4px 20px #0001;
+}
+
+/* ── RESET ── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;
+  min-height:100vh;padding:2rem 1rem;transition:background .25s,color .25s}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;
+  max-width:1200px;margin:0 auto 1.5rem}
+h1{font-size:1.7rem;font-weight:700}
+.subtitle{text-align:center;color:var(--muted);font-size:.9rem;margin-bottom:2rem}
+
+/* ── THEME TOGGLE ── */
+.theme-toggle{display:flex;align-items:center;gap:.5rem;cursor:pointer;
+  background:var(--surface);border:1px solid var(--border);border-radius:99px;
+  padding:.35rem .9rem;font-size:.8rem;color:var(--muted);
+  transition:all .2s;user-select:none}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.toggle-track{width:36px;height:20px;border-radius:99px;background:var(--border);
+  position:relative;transition:background .25s}
+.toggle-thumb{width:14px;height:14px;border-radius:50%;background:#fff;
+  position:absolute;top:3px;left:3px;transition:transform .25s,background .25s;
+  box-shadow:0 1px 3px #0003}
+[data-theme="light"] .toggle-track{background:var(--accent)}
+[data-theme="light"] .toggle-thumb{transform:translateX(16px)}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:.5rem;justify-content:center;margin-bottom:2rem;flex-wrap:wrap}
+.tab-btn{padding:.5rem 1.4rem;border-radius:99px;border:2px solid var(--border);
+  background:transparent;color:var(--muted);cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.tab-content{display:none}.tab-content.active{display:block}
+
+/* ── FLASHCARDS ── */
+.deck-header{text-align:center;color:var(--muted);margin-bottom:1.5rem;font-size:.85rem}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.2rem}
+.flashcard{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.flashcard:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.card-header{display:flex;align-items:center;justify-content:space-between;
+  padding:.75rem 1rem;border-bottom:1px solid var(--border);background:var(--surface)}
+.card-title{font-weight:700;font-size:.95rem}
+.badge{font-size:.7rem;padding:.2rem .6rem;border-radius:99px;
+  background:var(--border);color:var(--accent)}
+.card-body{padding:1.1rem}
+.card-front p{font-size:.85rem;color:var(--muted);margin-bottom:.5rem}
+.card-front h3{font-size:1rem;font-weight:600;line-height:1.4}
+.card-back{display:none}
+.flashcard.flipped .card-front{display:none}
+.flashcard.flipped .card-back{display:block}
+.field{margin-bottom:.75rem}
+.field-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--accent);margin-bottom:.25rem}
+.field-value{font-size:.82rem;color:var(--text);line-height:1.5}
+.flip-hint{font-size:.7rem;color:var(--muted);text-align:right;margin-top:.6rem}
+.scenario-box{background:var(--surface);border-left:3px solid var(--yellow);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;margin-top:.5rem;font-size:.82rem}
+.answer-box{background:var(--surface);border-left:3px solid var(--green);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;margin-top:.4rem;font-size:.82rem}
+
+/* ── Q&A ── */
+.qa-grid{display:grid;gap:1.2rem}
+.qa-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.qa-header{display:flex;align-items:center;justify-content:space-between;
+  padding:.7rem 1rem;background:var(--surface);border-bottom:1px solid var(--border)}
+.qa-label{font-size:.8rem;font-weight:700;color:var(--accent)}
+.qa-url{font-size:.7rem;color:var(--muted);text-decoration:none}
+.qa-url:hover{color:var(--accent)}
+.qa-body{padding:1rem}
+.qa-question{font-size:.9rem;line-height:1.5;margin-bottom:.8rem;font-weight:500}
+.choices{list-style:none;display:grid;gap:.4rem}
+.choice{padding:.5rem .8rem;border-radius:8px;border:1px solid var(--border);
+  font-size:.82rem;cursor:pointer;transition:all .2s;user-select:none}
+.choice:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.choice.correct{background:color-mix(in srgb,var(--green) 12%,transparent);
+  border-color:var(--green);color:var(--green)}
+.choice.wrong{background:color-mix(in srgb,var(--red) 12%,transparent);
+  border-color:var(--red);color:var(--red)}
+.explanation{display:none;margin-top:.8rem;font-size:.82rem;line-height:1.5;
+  background:var(--surface);border-left:3px solid var(--accent);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;color:var(--muted)}
+.explanation.visible{display:block}
+
+/* ── STATS ── */
+.stats-bar{display:flex;gap:1rem;justify-content:center;margin-bottom:1.5rem;flex-wrap:wrap}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:.5rem 1.1rem;text-align:center;min-width:90px}
+.stat-num{font-size:1.4rem;font-weight:700}
+.stat-label{font-size:.7rem;color:var(--muted)}
+.stat.green .stat-num{color:var(--green)}
+.stat.red .stat-num{color:var(--red)}
+.stat.yellow .stat-num{color:var(--yellow)}
+</style>
+<script>
+(function(){
+  var t=localStorage.getItem('pca-theme')||
+    (window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');
+  document.documentElement.setAttribute('data-theme',t);
+})();
+</script>
+</head>
+<body>
+<div class="topbar">
+  <h1>PCA &mdash; Networking</h1>
+  <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+    <span id="theme-label">&#9728;&#65039; Light mode</span>
+  </button>
+</div>
+<p class="subtitle">VPC, VPN,Load Balancing, Firewall, CDN, Interconnect — PCA exam patterns.</p>
+<div class="tabs"><button class="tab-btn active" data-tab="flashcards" onclick="switchTab('flashcards')">&#128218; Flashcards</button><button class="tab-btn" data-tab="exam-qa" onclick="switchTab('exam-qa')">&#129514; Exam Q&amp;A</button></div>
+
+<div id="tab-flashcards" class="tab-content active">
+  <p class="deck-header">Showing 14 cards &mdash; click to flip</p>
+  <div class="cards-grid">
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Dedicated Interconnect</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Physical layer-2 connection between your on-premises network and Google&#x27;s network, bypassing the public internet entirely.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">High-throughput (10–100 Gbps), low-latency workloads; large-scale DB replication; production hybrid architectures requiring private IPs.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Locations without Google colocation facilities; low-bandwidth or cost-sensitive dev/test workloads.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Highest performance and lowest latency, but requires colocation agreement, higher cost, and longer provisioning lead time.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Deploy two connections in different metro areas for 99.99% availability. Traffic never traverses the public internet, reducing exfiltration risk.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A 4 TB database replicates to GCP with large frequent updates and requires private address space communication.</div><div class="answer-box">Google Cloud Dedicated Interconnect — high bandwidth, low latency, private connectivity.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Partner Interconnect</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Connectivity to GCP through a supported service provider&#x27;s network when a direct physical connection to a Google colocation facility is not possible.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Locations not near a Google colocation facility; lower bandwidth needs than Dedicated Interconnect (50 Mbps to 10 Gbps).</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">When 10–100 Gbps throughput is required and a Google colocation facility is accessible — use Dedicated Interconnect instead.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">More accessible than Dedicated Interconnect but adds a third-party provider dependency and slightly higher latency.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Still private — traffic goes through the partner network, not the public internet. Validate provider SLAs match your availability targets.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company needs private hybrid connectivity but is not located near a Google POP and needs 1 Gbps.</div><div class="answer-box">Partner Interconnect via a supported service provider.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Global External HTTP(S) Load Balancer</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Google&#x27;s globally distributed HTTP/HTTPS load balancer with URL-map path routing, SSL offload, and anycast frontend IP.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Global web apps needing path-based routing, multi-region deployments, SSL termination at the edge, and Cloud CDN integration.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">TCP/UDP apps (use TCP/SSL Proxy LB or Network LB); purely internal traffic (use Internal HTTP(S) LB).</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Massive global scale and sophisticated routing vs. complexity in URL map configuration.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Attach Cloud Armor WAF policies to the backend service. Enable Cloud CDN to reduce backend load and egress cost.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">You need global path-based routing with end-to-end encryption following Google best practices.</div><div class="answer-box">Global External HTTPS Load Balancer with URL Maps and managed SSL certificates.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Internal HTTP(S) Load Balancer</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Managed HTTP/HTTPS load balancer that distributes traffic to backends within a VPC using private internal IP addresses only.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Microservices communication within a VPC or Shared VPC; internal APIs that must never be reachable from the internet.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Public-facing traffic; cross-region internal traffic (use global internal HTTP(S) LB for that).</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Keeps traffic entirely internal (no public exposure), but only accessible within the VPC or connected on-premises networks.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">No public IP means no direct internet attack surface. Use IAM and firewall rules to further restrict which services can reach the LB.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">Backend microservices in a VPC must be load-balanced internally without any public internet exposure.</div><div class="answer-box">Internal HTTP(S) Load Balancer using private IP within the VPC.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">VPC Firewall Rules</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Stateful ingress/egress rules applied to VPC instances, evaluated by priority number (lower number = higher priority, evaluated first).</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Controlling traffic between tiers in a VPC; restricting external access; enforcing egress policies without public IPs.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Cross-project perimeter control (use VPC Service Controls); layer-7 traffic inspection (use a third-party NGFW or Cloud IDS).</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Simple and flexible tag-based targeting works well with autoscaling, but rules are not layer-7 aware.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use network tags over CIDR ranges for autoscaling compatibility. Default-deny everything; allow only required explicit flows.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A 3-tier VPC must allow web→API and API→DB traffic but block web→DB. Instances autoscale so no static IPs.</div><div class="answer-box">Add network tags to each tier and create ingress firewall rules scoped to those tags.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cloud NAT</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Managed network address translation service that allows instances with only private IPs to initiate outbound connections to the internet.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Private GKE clusters or VMs that need to download packages or reach external APIs without having public IPs assigned.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Inbound internet connections (NAT is outbound only); use public IPs or load balancers when inbound reach is also required.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Security benefit of no public IPs on instances vs. no direct inbound internet connectivity.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Scope NAT to specific subnets — do not apply it org-wide unnecessarily. Monitor port allocation metrics to avoid SNAT port exhaustion under high connection loads.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A subnet&#x27;s VMs have only private IPs and need to download OS packages from the internet.</div><div class="answer-box">Configure Cloud NAT on the VPC, scoped to that subnet.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Shared VPC</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture where one host project owns and manages the VPC, and multiple service projects share it for compute workloads.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Large organizations needing to separate network administration from compute workload ownership across teams.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Single-project setups or small teams where separation adds unnecessary overhead.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Clean separation of duties (network vs. workload teams) vs. added governance and dependency on the host project.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Assign Network Admin to the networking team in the host project. Dev teams get Compute Admin only in service projects — they never see host network resources.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A networking team must manage all VPC resources. A dev team needs Compute Admin but must not access network config or sensitive VM data.</div><div class="answer-box">Shared VPC — host project owned by the networking team; dev team works in a service project with Compute Admin only.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">VPC Network Peering</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Private, low-latency connectivity between two VPC networks across projects or organizations using Google&#x27;s internal network — no overlapping CIDRs allowed.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Internal connectivity between separate VPCs in the same or different organizations where IP ranges do not overlap and transitive routing is not needed.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Overlapping CIDR ranges (use Cloud VPN + NAT instead); when transitive routing is needed (peering is non-transitive).</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Simplest private multi-VPC connectivity with low latency and no VPN overhead, but strictly non-transitive.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">No extra charge for peering itself. IAM policies still apply per project. Use firewall tags to enforce least-privilege between peered networks.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">Two VPCs in separate organizations with non-overlapping subnets need high-throughput, low-latency private communication.</div><div class="answer-box">VPC Network Peering — provides internal Google routing without public internet traversal.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">VPC Service Controls</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Security perimeters around GCP API services (Cloud Storage, BigQuery, etc.) that restrict access regardless of IAM permissions, preventing data exfiltration.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Protecting sensitive data from exfiltration by insiders or compromised code; enforcing that GCP APIs are only accessible from specific networks or identities.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Simple IAM-only use cases without sensitive data; services not yet covered by VPC Service Controls support list.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Strong perimeter-based exfiltration protection, but requires careful access level design to avoid accidentally blocking legitimate workflows.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Combine with access levels scoped to corporate CIDR ranges. Audit Denied access logs to catch misconfigurations early.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">Data analysts have IAM access to Cloud Storage buckets but must not be able to download data from outside the office network.</div><div class="answer-box">VPC Service Controls perimeter with an access level limited to the office network CIDR.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Private Google Access</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Subnet-level configuration that lets VM instances with only internal IPs reach Google APIs and services (Cloud Storage, BigQuery, etc.) without a public IP.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">VMs with no external IP that need to call Google APIs; required when using Cloud NAT is not sufficient for API access.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Access to non-Google external services — use Cloud NAT for that; not a substitute for VPC Service Controls perimeter enforcement.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Enables Google API access from private VMs at no extra cost, but only covers Google APIs — not arbitrary internet destinations.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Enable per subnet. Combine with VPC Service Controls for full exfiltration protection. Does not expose VMs to inbound internet traffic.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A VM with no public IP must upload files to Cloud Storage in a secured environment with no internet access.</div><div class="answer-box">Enable Private Google Access on the subnet — the VM can reach Cloud Storage via internal routes.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Serverless VPC Access</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Connector that allows serverless runtimes (Cloud Run, App Engine Standard, Cloud Functions) to reach resources inside a VPC using internal IPs.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">App Engine Standard or Cloud Run services that need to connect to on-premises databases via Cloud VPN, or to VPC-internal services.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Workloads already running inside a VPC (GCE, GKE) — they are already on the VPC; no connector needed.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Bridges serverless isolation to VPC connectivity, but adds a connector resource with its own scaling and cost.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Size the connector throughput to match traffic. The connector itself has an IP in your VPC — apply firewall rules to limit what it can reach.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">An App Engine Standard app must connect to an on-premises database via an existing Cloud VPN tunnel.</div><div class="answer-box">Configure Serverless VPC Access connector — App Engine Standard uses it to route traffic through the VPC and on to on-premises.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cloud CDN</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Google&#x27;s globally distributed content delivery network, integrated with the External HTTP(S) Load Balancer to cache content at edge POPs worldwide.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Static assets, media streaming, public APIs with cacheable responses, and global user bases needing low latency reads.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Dynamic fully personalized content that must not be cached; internal-only traffic with no global reach requirement.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Significant latency reduction and origin offload vs. cache invalidation complexity for frequently updated content.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use signed URLs or signed cookies to protect private content behind CDN. Carefully set Cache-Control headers to avoid caching sensitive responses.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A global media platform wants to reduce latency for users worldwide and lower origin server load.</div><div class="answer-box">Enable Cloud CDN on the backend service of the Global HTTPS Load Balancer.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Identity-Aware Proxy (IAP) TCP Tunneling</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Google service that enforces identity and context-based access to internal VMs via SSH/RDP tunnels without requiring public IPs or a bastion host.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">SSH access to private VMs from corporate users without a VPN or bastion; identity-controlled admin access enforced at the Google level.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">High-throughput application traffic (IAP is for admin tunneling, not data paths); automated on-premises-initiated connections.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">More secure and auditable than bastion hosts, but requires IAP-secured Tunnel User IAM role and the gcloud CLI on the client side.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Grant only the roles/iap.tunnelResourceAccessor role to specific identities. Combine with OS Login for full identity-controlled SSH without managing SSH keys.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">Instances have no public IPs. An engineer must SSH in without violating the no-public-IP security requirement.</div><div class="answer-box">Configure IAP TCP tunneling and use gcloud compute ssh with the --tunnel-through-iap flag.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cloud DNS</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Scalable, reliable managed DNS service running on Google&#x27;s infrastructure, supporting public and private zones.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Hosting public DNS zones for domains; private zones for internal GCP service discovery; DNS peering between VPCs; hybrid on-premises DNS resolution.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Application-level service discovery within Kubernetes (use kube-dns / Cloud DNS for GKE); sub-millisecond DNS caching within a single VM.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Fully managed with 100% SLA and global anycast, but DNS propagation still has TTL-based delays for changes.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use private zones to keep internal service names off the public internet. DNSSEC can be enabled on public zones to prevent spoofing.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">Internal GCP services must resolve each other by name without exposing those names publicly.</div><div class="answer-box">Create a Cloud DNS private zone scoped to the VPC.</div></div>
+    </div>
+  </div>
+</div></div>
+</div>
+
+<div id="tab-exam-qa" class="tab-content">
+  <div class="stats-bar">
+    <div class="stat green"><div class="stat-num" id="s-correct">0</div><div class="stat-label">Correct</div></div>
+    <div class="stat red"><div class="stat-num" id="s-wrong">0</div><div class="stat-label">Wrong</div></div>
+    <div class="stat yellow"><div class="stat-num" id="s-total">0</div><div class="stat-label">Total</div></div>
+  </div>
+  <div class="qa-grid">
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 1</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/7083-exam-professional-cloud-architect-topic-1-question-1/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company has decided to make a major revision of their API in order to create better experiences for their developers. They need to keep the old version of the API available and deployable, while allowing new customers and testers to try out the new API. They want to keep the same SSL and DNS records in place to serve both APIs. What should they do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Configure a new load balancer for the new version of the API</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Reconfigure old clients to use a new endpoint for the new API</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Have the old API forward traffic to the new API based on the path</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Use separate backend pools for each API path behind the load balancer</li>
+</ul>
+    <div class="explanation">Use path‑based routing on a single HTTPS load balancer and map different URL paths to different backend services (old vs new API). This keeps the same DNS and SSL while allowing both versions to coexist.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 9</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/7130-exam-professional-cloud-architect-topic-1-question-9/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You set up an autoscaling instance group to serve web traffic for an upcoming launch. After configuring the instance group as a backend service to an HTTP(S) load balancer, you notice that virtual machine (VM) instances are being terminated and re-launched every minute. The instances do not have a public IP address. You have verified the appropriate web response is coming from each instance using the curl command. You want to ensure the backend is configured correctly. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Ensure that a firewall rules exists to allow source traffic on HTTP/HTTPS to reach the load balancer.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Assign a public IP to each instance and configure a firewall rule to allow the load balancer to reach the instance public IP.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Ensure that a firewall rule exists to allow load balancer health checks to reach the instances in the instance group.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create a tag on each instance with the name of the load balancer. Configure a firewall rule with the name of the load balancer as the source and the instance tag as the destination.</li>
+</ul>
+    <div class="explanation">Health checks originate from specific Google ranges and must be allowed by firewall rules; otherwise instances repeatedly fail health checks and get recreated.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 27</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/11781-exam-professional-cloud-architect-topic-1-question-27/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company has decided to build a backup replica of their on-premises user authentication PostgreSQL database on Google Cloud Platform. The database is 4 TB, and large updates are frequent. Replication requires private address space communication. Which networking approach should you use?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Google Cloud Dedicated Interconnect</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Google Cloud VPN connected to the data center network</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.A NAT and TLS translation gateway installed on-premises</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.A Google Compute Engine instance with a VPN server installed connected to the data center network</li>
+</ul>
+    <div class="explanation">For large, frequently updated data and private connectivity, Dedicated Interconnect provides high bandwidth and low latency compared with VPN‑based options.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 33</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/9033-exam-professional-cloud-architect-topic-1-question-33/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your organization has a 3-tier web application deployed in the same network on Google Cloud Platform. Each tier (web, API, and database) scales independently of the others. Network traffic should flow through the web to the API tier and then on to the database tier. Traffic should not flow between the web and the database tier. How should you configure the network?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Add each tier to a different subnetwork</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Set up software based firewalls on individual VMs</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Add tags to each tier and set up routes to allow the desired traffic flow</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Add tags to each tier and set up firewall rules to allow the desired traffic flow</li>
+</ul>
+    <div class="explanation">Use network tags and firewall rules to permit only the required flows (web→API, API→DB) and deny direct web→DB communication within the VPC.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 39</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/6844-exam-professional-cloud-architect-topic-1-question-39/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are designing a mobile chat application. You want to ensure people cannot spoof chat messages, by providing a message were sent by a specific user. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Tag messages client side with the originating user identifier and the destination user.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Encrypt the message client side using block-based encryption with a shared key.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Use public key infrastructure (PKI) to encrypt the message client side using the originating user&#x27;s private key.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Use a trusted certificate authority to enable SSL connectivity between the client application and the server.</li>
+</ul>
+    <div class="explanation">Signing with the sender&#x27;s private key (PKI) lets receivers verify authenticity and prevent spoofing, because only the legitimate user has that private key.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 40</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/7211-exam-professional-cloud-architect-topic-1-question-40/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">As part of implementing their disaster recovery plan, your company is trying to replicate their production MySQL database from their private data center to their GCP project using a Google Cloud VPN connection. They are experiencing latency issues and a small amount of packet loss that is disrupting the replication. What should they do?...</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Configure their replication to use UDP.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Configure a Google Cloud Dedicated Interconnect.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Restore their database daily using Google Cloud SQL.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Add additional VPN connections and load balance them.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">E.Send the replicated transaction to Google Cloud Pub/Sub.</li>
+</ul>
+    <div class="explanation">Dedicated Interconnect provides more reliable, lower‑latency, higher‑bandwidth connectivity than VPN for steady replication traffic.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 43</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/11804-exam-professional-cloud-architect-topic-1-question-43/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You want to create a private connection between your instances on Compute Engine and your on-premises data center. You require a connection of at least 20 Gbps. You want to follow Google-recommended practices. How should you set up the connection?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Create a VPC and connect it to your on-premises data center using Dedicated Interconnect.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Create a VPC and connect it to your on-premises data center using a single Cloud VPN.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Create a Cloud Content Delivery Network (Cloud CDN) and connect it to your on-premises data center using Dedicated Interconnect.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create a Cloud Content Delivery Network (Cloud CDN) and connect it to your on-premises datacenter using a single Cloud VPN.</li>
+</ul>
+    <div class="explanation">A single VPN tunnel cannot provide 20 Gbps throughput; Dedicated Interconnect is the recommended option for such bandwidth requirements.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 50</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/7042-exam-professional-cloud-architect-topic-1-question-50/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are migrating your on-premises solution to Google Cloud in several phases. You will use Cloud VPN to maintain a connection between your on-premises systems and Google Cloud until the migration is completed. You want to make sure all your on-premise systems remain reachable during this period. How should you organize your networking in Google Cloud?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Use the same IP range on Google Cloud as you use on-premises</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Use the same IP range on Google Cloud as you use on-premises for your primary IP range and use a secondary range that does not overlap with the range you use on-premises</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Use an IP range on Google Cloud that does not overlap with the range you use on-premises</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Use an IP range on Google Cloud that does not overlap with the range you use on-premises for your primary IP range and use a secondary range with the same IP range as you use on-premises</li>
+</ul>
+    <div class="explanation">Cloud VPN requires non‑overlapping IP ranges between on‑premises and GCP to avoid routing conflicts and ensure full reachability.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 53</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/6314-exam-professional-cloud-architect-topic-1-question-53/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are deploying an application on App Engine that needs to integrate with an on-premises database. For security purposes, your on-premises database must not be accessible through the public internet. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Deploy your application on App Engine standard environment and use App Engine firewall rules to limit access to the open on-premises database.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Deploy your application on App Engine standard environment and use Cloud VPN to limit access to the on-premises database.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Deploy your application on App Engine flexible environment and use App Engine firewall rules to limit access to the on-premises database.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Deploy your application on App Engine flexible environment and use Cloud VPN to limit access to the on-premises database.</li>
+</ul>
+    <div class="explanation">To reach a private on‑prem database, you need private hybrid connectivity (Cloud VPN or Interconnect) and an environment that supports VPC access; App Engine flexible with Cloud VPN fits this.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 54</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/7180-exam-professional-cloud-architect-topic-1-question-54/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are working in a highly secured environment where public Internet access from the Compute Engine VMs is not allowed. You do not yet have a VPN connection to access an on-premises file server. You need to install specific software on a Compute Engine instance. How should you install the software?...</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Upload the required installation files to Cloud Storage. Configure the VM on a subnet with a Private Google Access subnet. Assign only an internal IP address to the VM. Download the installation files to the VM using gsutil.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Upload the required installation files to Cloud Storage and use firewall rules to block all traffic except the IP address range for Cloud Storage. Download the files to the VM using gsutil.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Upload the required installation files to Cloud Source Repositories. Configure the VM on a subnet with a Private Google Access subnet. Assign only an internal IP address to the VM. Download the installation files to the VM using gcloud.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Upload the required installation files to Cloud Source Repositories and use firewall rules to block all traffic except the IP address range for Cloud Source Repositories. Download the files to the VM using gsutil.</li>
+</ul>
+    <div class="explanation">Private Google Access lets VMs with only internal IPs reach Google APIs such as Cloud Storage, so you can securely pull installation files from a bucket.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 72</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/11816-exam-professional-cloud-architect-topic-1-question-72/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your web application has several VM instances running within a VPC. You want to restrict communications between instances to only the paths and ports you authorize, but you don&#x27;t want to rely on static IP addresses or subnets because the app can autoscale. How should you restrict communications?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Use separate VPCs to restrict traffic</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Use firewall rules based on network tags attached to the compute instances</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Use Cloud DNS and only allow connections from authorized hostnames</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Use service accounts and configure the web application to authorize particular service accounts to have access</li>
+</ul>
+    <div class="explanation">Network tags decouple firewall policy from specific IPs or subnets and work well with autoscaling managed instance groups.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 77</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/11819-exam-professional-cloud-architect-topic-1-question-77/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You want to establish a Compute Engine application in a single VPC across two regions. The application must communicate over VPN to an on-premises network. How should you deploy the VPN?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Use VPC Network Peering between the VPC and the on-premises network.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Expose the VPC to the on-premises network using IAM and VPC Sharing.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Create a global Cloud VPN Gateway with VPN tunnels from each region to the on-premises peer gateway.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Deploy Cloud VPN Gateway in each region. Ensure that each region has at least one VPN tunnel to the on-premises peer gateway.</li>
+</ul>
+    <div class="explanation">Classic and HA Cloud VPN gateways are regional resources; to support workloads in multiple regions, deploy a gateway and tunnels in each region.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 80</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/6399-exam-professional-cloud-architect-topic-1-question-80/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You need to develop procedures to verify resilience of disaster recovery for remote recovery using GCP. Your production environment is hosted on-premises. You need to establish a secure, redundant connection between your on-premises network and the GCP network. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Verify that Dedicated Interconnect can replicate files to GCP. Verify that direct peering can establish a secure connection between your networks if Dedicated Interconnect fails.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Verify that Dedicated Interconnect can replicate files to GCP. Verify that Cloud VPN can establish a secure connection between your networks if Dedicated Interconnect fails.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Verify that the Transfer Appliance can replicate files to GCP. Verify that direct peering can establish a secure connection between your networks if the Transfer Appliance fails.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Verify that the Transfer Appliance can replicate files to GCP. Verify that Cloud VPN can establish a secure connection between your networks if the Transfer Appliance fails.</li>
+</ul>
+    <div class="explanation">The common DR pattern is primary Dedicated Interconnect with Cloud VPN as encrypted backup connectivity.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 91</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/6817-exam-professional-cloud-architect-topic-1-question-91/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">All Compute Engine instances in your VPC should be able to connect to an Active Directory server on specific ports. Any other traffic emerging from your instances is not allowed. You want to enforce this using VPC firewall rules. How should you configure the firewall rules?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Create an egress rule with priority 1000 to deny all traffic for all instances. Create another egress rule with priority 100 to allow the Active Directory traffic for all instances.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Create an egress rule with priority 100 to deny all traffic for all instances. Create another egress rule with priority 1000 to allow the Active Directory traffic for all instances.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Create an egress rule with priority 1000 to allow the Active Directory traffic. Rely on the implied deny egress rule with priority 100 to block all traffic for all instances.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create an egress rule with priority 100 to allow the Active Directory traffic. Rely on the implied deny egress rule with priority 1000 to block all traffic for all instances....</li>
+</ul>
+    <div class="explanation">Explicitly allow egress to AD with a higher priority (numerically larger value) than the implied deny‑all rule, and rely on the implied deny to block everything else.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 94</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/10289-exam-professional-cloud-architect-topic-1-question-94/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You need to design a solution for global load balancing based on the URL path being requested. You need to ensure operations reliability and end-to-end in- transit encryption based on Google best practices. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Create a cross-region load balancer with URL Maps.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Create an HTTPS load balancer with URL Maps.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Create appropriate instance groups and instances. Configure SSL proxy load balancing.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create a global forwarding rule. Configure SSL proxy load balancing.</li>
+</ul>
+    <div class="explanation">A global external HTTPS load balancer with URL maps supports path‑based routing and provides end‑to‑end encryption from client to backend.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 101</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/6306-exam-professional-cloud-architect-topic-1-question-101/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company is building a new architecture to support its data-centric business focus. You are responsible for setting up the network. Your company&#x27;s mobile and web-facing applications will be deployed on-premises, and all data analysis will be conducted in GCP. The plan is to process and load 7 years of archived .csv files totaling 900 TB of data and then continue loading 10 TB of data daily. You currently have an existing 100-MB internet connection. What actions will meet your company&#x27;s needs?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Compress and upload both archived  files and files uploaded daily using the gsutil ג€\&quot;m option.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Lease a Transfer Appliance, upload archived files to it, and send it to Google to transfer archived data to Cloud Storage. Establish a connection with Google using a Dedicated Interconnect or Direct Peering connection and use it to upload files daily.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Lease a Transfer Appliance, upload archived files to it, and send it to Google to transfer archived data to Cloud Storage. Establish one Cloud VPN Tunnel to VPC networks over the public internet, and compress and upload files daily using the gsutil ג€\&quot;m option.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Lease a Transfer Appliance, upload archived files to it, and send it to Google to transfer archived data to Cloud Storage. Establish a Cloud VPN Tunnel to VPC networks over the public internet, and compress and upload files daily.</li>
+</ul>
+    <div class="explanation">Transfer Appliance is designed for bulk 900 TB historical load, and Dedicated Interconnect or Direct Peering provides sufficient ongoing bandwidth for 10 TB/day ingestion.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 105</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/56368-exam-professional-cloud-architect-topic-1-question-105/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company has an application running on multiple Compute Engine instances. You need to ensure that the application can communicate with an on-premises service that requires high throughput via internal IPs, while minimizing latency. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Use OpenVPN to configure a VPN tunnel between the on-premises environment and Google Cloud.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Configure a direct peering connection between the on-premises environment and Google Cloud.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Use Cloud VPN to configure a VPN tunnel between the on-premises environment and Google Cloud.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Configure a Cloud Dedicated Interconnect connection between the on-premises environment and Google Cloud.</li>
+</ul>
+    <div class="explanation">For high throughput, low‑latency, private IP connectivity, Dedicated Interconnect is preferred over VPN or direct peering.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 113</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/56576-exam-professional-cloud-architect-topic-1-question-113/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your organization has decided to restrict the use of external IP addresses on instances to only approved instances. You want to enforce this requirement across all of your Virtual Private Clouds (VPCs). What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Remove the default route on all VPCs. Move all approved instances into a new subnet that has a default route to an internet gateway.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Create a new VPC in custom mode. Create a new subnet for the approved instances, and set a default route to the internet gateway on this new subnet.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Implement a Cloud NAT solution to remove the need for external IP addresses entirely.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Set an Organization Policy with a constraint on constraints/compute.vmExternalIpAccess. List the approved instances in the allowedValues list.</li>
+</ul>
+    <div class="explanation">The org policy constraint `compute.vmExternalIpAccess` is the recommended way to centrally control which instances may have external IP addresses.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 115</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/56376-exam-professional-cloud-architect-topic-1-question-115/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company has sensitive data in Cloud Storage buckets. Data analysts have Identity Access Management (IAM) permissions to read the buckets. You want to prevent data analysts from retrieving the data in the buckets from outside the office network. What should you do?...</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.1. Create a VPC Service Controls perimeter that includes the projects with the buckets. 2. Create an access level with the CIDR of the office network.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.1. Create a firewall rule for all instances in the Virtual Private Cloud (VPC) network for source range. 2. Use the Classless Inter-domain Routing (CIDR) of the office network.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.1. Create a Cloud Function to remove IAM permissions from the buckets, and another Cloud Function to add IAM permissions to the buckets. 2. Schedule the Cloud Functions with Cloud Scheduler to add permissions at the start of business and remove permissions at the end of business.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.1. Create a Cloud VPN to the office network. 2. Configure Private Google Access for on-premises hosts.</li>
+</ul>
+    <div class="explanation">VPC Service Controls with an access level limited to office CIDR is the recommended data exfiltration protection pattern for Cloud Storage.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 118</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/56680-exam-professional-cloud-architect-topic-1-question-118/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company has just acquired another company, and you have been asked to integrate their existing Google Cloud environment into your company&#x27;s data center. Upon investigation, you discover that some of the RFC 1918 IP ranges being used in the new company&#x27;s Virtual Private Cloud (VPC) overlap with your data center IP space. What should you do to enable connectivity and make sure that there are no routing conflicts when connectivity is established?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Create a Cloud VPN connection from the new VPC to the data center, create a Cloud Router, and apply new IP addresses so there is no overlapping IP space.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Create a Cloud VPN connection from the new VPC to the data center, and create a Cloud NAT instance to perform NAT on the overlapping IP space.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Create a Cloud VPN connection from the new VPC to the data center, create a Cloud Router, and apply a custom route advertisement to block the overlapping IP space.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create a Cloud VPN connection from the new VPC to the data center, and apply a firewall rule that blocks the overlapping IP space.</li>
+</ul>
+    <div class="explanation">NATing the overlapping ranges on one side avoids routing conflicts while preserving connectivity, which is a typical workaround for overlapping RFC1918 spaces.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 120</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/56416-exam-professional-cloud-architect-topic-1-question-120/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company has a project in Google Cloud with three Virtual Private Clouds (VPCs). There is a Compute Engine instance on each VPC. Network subnets do not overlap and must remain separated. The network configuration is shown below. Instance #1 is an exception and must communicate directly with both Instance #2 and Instance #3 via internal IPs. How should you accomplish this?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Create a cloud router to advertise subnet #2 and subnet #3 to subnet #1.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Add two additional NICs to Instance #1 with the following configuration: ג€¢ NIC1 ג—‹ VPC: VPC #2 ג—‹ SUBNETWORK: subnet #2 ג€¢ NIC2 ג—‹ VPC: VPC #3 ג—‹ SUBNETWORK: subnet #3 Update firewall rules to enable traffic between instances.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Create two VPN tunnels via CloudVPN: ג€¢ 1 between VPC #1 and VPC #2. ג€¢ 1 between VPC #2 and VPC #3. Update firewall rules to enable traffic between the instances.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Peer all three VPCs: ג€¢ Peer VPC #1 with VPC #2. ג€¢ Peer VPC #2 with VPC #3. Update firewall rules to enable traffic between the instances.</li>
+</ul>
+    <div class="explanation">A VM with multiple NICs can directly connect to multiple VPCs; adding NICs for VPC #2 and VPC #3 to instance #1 lets it talk to instances 2 and 3 via internal IPs.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 130</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/57301-exam-professional-cloud-architect-topic-1-question-130/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company has a networking team and a development team. The development team runs applications on Compute Engine instances that contain sensitive data. The development team requires administrative permissions for Compute Engine. Your company requires all network resources to be managed by the networking team. The development team does not want the networking team to have access to the sensitive data on the instances. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.1. Create a project with a standalone VPC and assign the Network Admin role to the networking team. 2. Create a second project with a standalone VPC and assign the Compute Admin role to the development team. 3. Use Cloud VPN to join the two VPCs.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.1. Create a project with a standalone Virtual Private Cloud (VPC), assign the Network Admin role to the networking team, and assign the Compute Admin role to the development team.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.1. Create a project with a Shared VPC and assign the Network Admin role to the networking team. 2. Create a second project without a VPC, configure it as a Shared VPC service project, and assign the Compute Admin role to the development team.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.1. Create a project with a standalone VPC and assign the Network Admin role to the networking team. 2. Create a second project with a standalone VPC and assign the Compute Admin role to the development team. 3. Use VPC Peering to join the two VPCs....</li>
+</ul>
+    <div class="explanation">Shared VPC centralizes network administration in the host project while allowing service projects (owned by dev) to manage compute without full access to network resources.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 133</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/56751-exam-professional-cloud-architect-topic-1-question-133/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You have deployed several instances on Compute Engine. As a security requirement, instances cannot have a public IP address. There is no VPN connection between Google Cloud and your office, and you need to connect via SSH into a specific machine without violating the security requirements. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Configure Cloud NAT on the subnet where the instance is hosted. Create an SSH connection to the Cloud NAT IP address to reach the instance.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Add all instances to an unmanaged instance group. Configure TCP Proxy Load Balancing with the instance group as a backend. Connect to the instance using the TCP Proxy IP.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Configure Identity-Aware Proxy (IAP) for the instance and ensure that you have the role of IAP-secured Tunnel User. Use the gcloud command line tool to ssh into the instance.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create a bastion host in the network to SSH into the bastion host from your office location. From the bastion host, SSH into the desired instance.</li>
+</ul>
+    <div class="explanation">IAP TCP tunneling allows SSH access to internal‑only VMs without public IPs, using IAM‑controlled identity and an outbound‑only IAP connection.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 150</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/60441-exam-professional-cloud-architect-topic-1-question-150/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your team needs to create a Google Kubernetes Engine (GKE) cluster to host a newly built application that requires access to third-party services on the internet. Your company does not allow any Compute Engine instance to have a public IP address on Google Cloud. You need to create a deployment strategy that adheres to these guidelines. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Configure the GKE cluster as a private cluster, and configure Cloud NAT Gateway for the cluster subnet.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Configure the GKE cluster as a private cluster. Configure Private Google Access on the Virtual Private Cloud (VPC).</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Configure the GKE cluster as a route-based cluster. Configure Private Google Access on the Virtual Private Cloud (VPC).</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create a Compute Engine instance, and install a NAT Proxy on the instance. Configure all workloads on GKE to pass through this proxy to access third-party services on the Internet.</li>
+</ul>
+    <div class="explanation">A private GKE cluster with Cloud NAT lets nodes access external services without public IPs and without managing custom proxy instances.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 151</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/60436-exam-professional-cloud-architect-topic-1-question-151/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company has a support ticketing solution that uses App Engine Standard. The project that contains the App Engine application already has a Virtual Private Cloud (VPC) network fully connected to the company&#x27;s on-premises environment through a Cloud VPN tunnel. You want to enable the App Engine application to communicate with a database that is running in the company&#x27;s on-premises environment. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Configure private Google access for on-premises hosts only.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Configure private Google access.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Configure private services access.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Configure serverless VPC access.</li>
+</ul>
+    <div class="explanation">Serverless VPC Access is the mechanism that lets App Engine standard connect to resources in a VPC, which is already connected to on‑prem via Cloud VPN.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 154</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/60627-exam-professional-cloud-architect-topic-1-question-154/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company has a stateless web API that performs scientific calculations. The web API runs on a single Google Kubernetes Engine (GKE) cluster. The cluster is currently deployed in us-central1. Your company has expanded to offer your API to customers in Asia. You want to reduce the latency for users in Asia. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Create a second GKE cluster in asia-southeast1, and expose both APIs using a Service of type LoadBalancer. Add the public IPs to the Cloud DNS zone.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Use a global HTTP(s) load balancer with Cloud CDN enabled.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Create a second GKE cluster in asia-southeast1, and use kubemci to create a global HTTP(s) load balancer.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Increase the memory and CPU allocated to the application in the cluster.</li>
+</ul>
+    <div class="explanation">Deploy regional GKE clusters close to users and front them with a global HTTP(S) load balancer (kubemci / multi‑cluster ingress) to deliver low latency worldwide.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 156</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/60416-exam-professional-cloud-architect-topic-1-question-156/..." target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company has a Google Cloud project that uses BigQuery for data warehousing. They have a VPN tunnel between the on-premises environment and Google Cloud that is configured with Cloud VPN. The security team wants to avoid data exfiltration by malicious insiders, compromised code, and accidental oversharing. What should they do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Configure Private Google Access for on-premises only.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Perform the following tasks: 1. Create a service account. 2. Give the BigQuery JobUser role and Storage Reader role to the service account. 3. Remove all other IAM access from the project.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Configure VPC Service Controls and configure Private Google Access.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Configure Private Google Access.</li>
+</ul>
+    <div class="explanation">VPC Service Controls provide perimeter‑based protection against data exfiltration from BigQuery and Cloud Storage, and Private Google Access ensures traffic stays on Google’s network.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 159</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/8341-exam-professional-cloud-architect-topic-1-question-159/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">A lead software engineer tells you that his new application design uses websockets and HTTP sessions that are not distributed across the web servers. You want to help him ensure his application will run properly on Google Cloud Platform. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Help the engineer to convert his websocket code to use HTTP streaming</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Review the encryption requirements for websocket connections with the security team</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Meet with the cloud operations team and the engineer to discuss load balancer options</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Help the engineer redesign the application to use a distributed user session service that does not rely on websockets and HTTP sessions.</li>
+</ul>
+    <div class="explanation">GCP load balancers are designed for stateless backends; relying on sticky sessions and websockets limits scalability and resilience, so redesigning to use distributed session storage fits best practices.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 183</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/80075-exam-professional-cloud-architect-topic-1-question-183/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company recently acquired a company that has infrastructure in Google Cloud. Each company has its own Google Cloud organization. Each company is using a Shared Virtual Private Cloud (VPC) to provide network connectivity for its applications. Some of the subnets used by both companies overlap. In order for both businesses to integrate, the applications need to have private network connectivity. These applications are not on overlapping subnets. You want to provide connectivity with minimal re-engineering. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Set up VPC peering and peer each Shared VPC together.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Migrate the projects from the acquired company into your company&#x27;s Google Cloud organization. Re-launch the instances in your companies Shared VPC.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Set up a Cloud VPN gateway in each Shared VPC and peer Cloud VPNs.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Configure SSH port forwarding on each application to provide connectivity between applications in the different Shared VPCs.</li>
+</ul>
+    <div class="explanation">Because some subnets overlap, VPC peering is not supported; using Cloud VPN between the two Shared VPCs allows private connectivity without re‑IPing.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 188</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/80000-exam-professional-cloud-architect-topic-1-question-188/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company and one of its partners each have a Google Cloud project in separate organizations. Your company&#x27;s project (prj-a) runs in Virtual Private Cloud (vpc-a). The partner&#x27;s project (prj-b) runs in vpc-b. There are two instances running on vpc-a and one instance running on vpc-b. Subnets defined in both VPCs are not overlapping. You need to ensure that all instances communicate with each other via internal IPs, minimizing latency and maximizing throughput. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Set up a network peering between vpc-a and vpc-b.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Set up a VPN between vpc-a and vpc-b using Cloud VPN.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Configure IAP TCP forwarding on the instance in vpc-b, and then launch the following gcloud command from one of the instances in vpc-a gcloud: gcloud compute start-iap-tunnel INSTANCE_NAME_IN_VPC_8 22 \\ --local-host-port=localhost:22</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.1. Create an additional instance in vpc-a. 2. Create an additional instance in vpc-b. 3. Install OpenVPN in newly created instances. 4. Configure a VPN tunnel between vpc-a and vpc-b with the help of OpenVPN.</li>
+</ul>
+    <div class="explanation">VPC Network Peering provides private, low‑latency, high‑throughput connectivity between non‑overlapping VPCs across organizations.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 191</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/80419-exam-professional-cloud-architect-topic-1-question-191/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are deploying an application to Google Cloud. The application is part of a system. The application in Google Cloud must communicate over a private network with applications in a non-Google Cloud environment. The expected average throughput is 200 kbps. The business requires: ✑ as close to 100% system availability as possible ✑ cost optimization You need to design the connectivity between the locations to meet the business requirements. What should you provision?...</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.An HA Cloud VPN gateway connected with two tunnels to an on-premises VPN gateway</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Two Classic Cloud VPN gateways connected to two on-premises VPN gateways Configure each Classic Cloud VPN gateway to have two tunnels, each connected to different on-premises VPN gateways</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Two HA Cloud VPN gateways connected to two on-premises VPN gateways Configure each HA Cloud VPN gateway to have two tunnels, each connected to different on-premises VPN gateways</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.A single Cloud VPN gateway connected to an on-premises VPN gateway</li>
+</ul>
+    <div class="explanation">HA Cloud VPN with two tunnels to an on‑premises gateway provides 99.99% availability and is cost‑effective for low throughput such as 200 kbps.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 193</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/121322-exam-professional-cloud-architect-topic-1-question-193/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are configuring the cloud network architecture for a newly created project in Google Cloud that will host applications in Compute Engine. Compute Engine virtual machine instances will be created in two different subnets (sub-a and sub-b) within a single region: •	Instances in sub-a will have public IP addresses. •	Instances in sub-b will have only private IP addresses. To download updated packages, instances must connect to a public repository outside the boundaries of Google Cloud. You need to allow sub-b to access the external repository. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Enable Private Google Access on sub-b.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Configure Cloud NAT and select sub-b in the NAT mapping section.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Configure a bastion host instance in sub-a to connect to instances in sub-b.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Enable Identity-Aware Proxy for TCP forwarding for instances in sub-b.</li>
+</ul>
+    <div class="explanation">Cloud NAT allows instances with only private IPs to reach external internet repositories without assigning public IP addresses to them.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 195</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/121313-exam-professional-cloud-architect-topic-1-question-195/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are deploying an application to Google Cloud. The application is part of a system. The application in Google Cloud must communicate over a private network with applications in a non-Google Cloud environment. The expected average throughput is 200 kbps. The business requires: •	99.99% system availability •	cost optimization You need to design the connectivity between the locations to meet the business requirements. What should you provision?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.An HA Cloud VPN gateway connected with two tunnels to an on-premises VPN gateway.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.A Classic Cloud VPN gateway connected with two tunnels to an on-premises VPN gateway.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Two HA Cloud VPN gateways connected to two on-premises VPN gateways. Configure each HA Cloud VPN gateway to have two tunnels, each connected to different on-premises VPN gateways.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.A Classic Cloud VPN gateway connected with one tunnel to an on-premises VPN gateway.</li>
+</ul>
+    <div class="explanation">A single HA Cloud VPN with two tunnels provides 99.99% availability at lower cost than deploying multiple HA gateways or interconnect.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 3 | Question 2</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/68709-exam-professional-cloud-architect-topic-3-question-2/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the Helicopter Racing League (HRL) case study. Recently HRL started a new regional racing league in Cape Town, South Africa. In an effort to give customers in Cape Town a better user experience, HRL has partnered with the Content Delivery Network provider, Fastly. HRL needs to allow traffic coming from all of the Fastly IP address ranges into their Virtual Private Cloud network (VPC network). You are a member of the HRL security team and you need to configure the update that will allow only the Fastly IP address ranges through the External HTTP(S) load balancer. Which command should you use? A. B. C. D.</div>
+    <ul class="choices"></ul>
+    <div class="explanation">The official solution uses a gcloud compute security‑policy rule allowing only Fastly’s IP ranges to the external HTTP(S) load balancer, corresponding to option A in the original exam context.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 4 | Question 3</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/60403-exam-professional-cloud-architect-topic-4-question-3/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You need to upgrade the EHR connection to comply with their requirements. The new connection design must support business-critical needs and meet the same network and security policy requirements. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Add a new Dedicated Interconnect connection.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Upgrade the bandwidth on the Dedicated Interconnect connection to 100 G.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Add three new Cloud VPN connections.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Add a new Carrier Peering connection.</li>
+</ul>
+    <div class="explanation">Adding an additional Dedicated Interconnect increases capacity and provides redundancy while keeping the same private connectivity model and security posture.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 4 | Question 4</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/60435-exam-professional-cloud-architect-topic-4-question-4/..." target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the EHR Healthcare case study. You need to define the technical architecture for hybrid connectivity between EHR&#x27;s on-premises systems and Google Cloud. You want to follow Google&#x27;s recommended practices for production-level applications. Considering the EHR Healthcare business and technical requirements, what should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Configure two Partner Interconnect connections in one metro (City), and make sure the Interconnect connections are placed in different metro zones.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Configure two VPN connections from on-premises to Google Cloud, and make sure the VPN devices on-premises are in separate racks.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Configure Direct Peering between EHR Healthcare and Google Cloud, and make sure you are peering at least two Google locations.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Configure two Dedicated Interconnect connections in one metro (City) and two connections in another metro, and make sure the Interconnect connections are placed in different metro zones.</li>
+</ul>
+    <div class="explanation">For mission‑critical production workloads, Google’s best practice is redundant Dedicated Interconnect connections in separate metros and metro zones to survive regional and facility failures.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 4 | Question 7</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/60409-exam-professional-cloud-architect-topic-4-question-7/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the EHR Healthcare case study. You are responsible for designing the Google Cloud network architecture for Google Kubernetes Engine. You want to follow Google best practices. Considering the EHR Healthcare business and technical requirements, what should you do to reduce the attack surface?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Use a private cluster with a private endpoint with master authorized networks configured.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Use a public cluster with firewall rules and Virtual Private Cloud (VPC) routes.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Use a private cluster with a public endpoint with master authorized networks configured.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Use a public cluster with master authorized networks enabled and firewall rules.</li>
+</ul>
+    <div class="explanation">Private clusters with private control plane endpoints and master authorized networks provide the smallest attack surface by avoiding public exposures of the control plane.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 5 | Question 5</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/9191-exam-professional-cloud-architect-topic-5-question-5/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Mountkirk Games needs to create a repeatable and configurable mechanism for deploying isolated application environments. Developers and testers can access each other&#x27;s environments and resources, but they cannot access staging or production resources. The staging environment needs access to some services from production. What should you do to isolate development environments from staging and production?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Create a project for development and test and another for staging and production</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Create a network for development and test and another for staging and production</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Create one subnetwork for development and another for staging and production</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Create one project for development, a second for staging and a third for production</li>
+</ul>
+    <div class="explanation">Isolating environments at the project level is a core best practice on GCP and lets you enforce separate IAM and policy boundaries between dev, staging, and prod.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 10 | Question 1</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/60524-exam-professional-cloud-architect-topic-10-question-1/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the TerramEarth case study. You start to build a new application that uses a few Cloud Functions for the backend. One use case requires a Cloud Function func_display to invoke another Cloud Function func_query. You want func_query only to accept invocations from func_display. You also want to follow Google&#x27;s recommended best practices. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Create a token and pass it in as an environment variable to func_display. When invoking func_query, include the token in the request. Pass the same token to func_query and reject the invocation if the tokens are different.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Make func_query &#x27;Require authentication.&#x27; Create a unique service account and associate it to func_display. Grant the service account invoker role for func_query. Create an id token in func_display and include the token to the request when invoking func_query.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Make func_query &#x27;Require authentication&#x27; and only accept internal traffic. Create those two functions in the same VPC. Create an ingress firewall rule for func_query to only allow traffic from func_display.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create those two functions in the same project and VPC. Make func_query only accept internal traffic. Create an ingress firewall for func_query to only allow traffic from func_display. Also, make sure both functions use the same service account.</li>
+</ul>
+    <div class="explanation">Using IAM with a dedicated service account and ID tokens is the recommended way to restrict one Cloud Function to be invoked only by another.</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 10 | Question 2</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/60525-exam-professional-cloud-architect-topic-10-question-2/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the TerramEarth case study. You have broken down a legacy monolithic application into a few containerized RESTful microservices. You want to run those microservices on Cloud Run. You also want to make sure the services are highly available with low latency to your customers. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Deploy Cloud Run services to multiple availability zones. Create Cloud Endpoints that point to the services. Create a global HTTP(S) Load Balancing instance and attach the Cloud Endpoints to its backend.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Deploy Cloud Run services to multiple regions. Create serverless network endpoint groups pointing to the services. Add the serverless NEGs to a backend service that is used by a global HTTP(S) Load Balancing instance.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Deploy Cloud Run services to multiple regions. In Cloud DNS, create a latency-based DNS name that points to the services.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Deploy Cloud Run services to multiple availability zones. Create a TCP/IP global load balancer. Add the Cloud Run Endpoints to its backend service.</li>
+</ul>
+    <div class="explanation">Multi‑region Cloud Run fronted by a global external HTTP(S) load balancer using serverless NEGs is the standard pattern for highly available, low‑latency serverless services.</div>
+  </div>
+</div></div>
+</div>
+<script>
+/* ── THEME ── */
+(function(){
+  var saved = localStorage.getItem('pca-theme') ||
+    (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+
+function toggleTheme(){
+  var next = document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('pca-theme', next);
+  var btn = document.getElementById('theme-label');
+  if(btn) btn.textContent = next==='dark' ? '☀️ Light mode' : '🌙 Dark mode';
+}
+
+/* ── FLASHCARDS ── */
+function flip(el){ el.classList.toggle('flipped'); }
+
+/* ── Q&A ── */
+var score = {correct:0, wrong:0};
+function updateStats(){
+  document.getElementById('s-correct').textContent = score.correct;
+  document.getElementById('s-wrong').textContent   = score.wrong;
+  document.getElementById('s-total').textContent   =
+    document.querySelectorAll('.qa-card').length;
+}
+
+function answer(btn, isCorrect){
+  var card = btn.closest('.qa-card');
+  if(card.dataset.answered) return;
+  card.dataset.answered = '1';
+  card.querySelectorAll('.choice').forEach(function(c){
+    if(c.dataset.correct==='1') c.classList.add('correct');
+    else if(c===btn) c.classList.add('wrong');
+  });
+  card.querySelector('.explanation').classList.add('visible');
+  if(isCorrect) score.correct++; else score.wrong++;
+  updateStats();
+}
+
+/* ── TABS ── */
+function switchTab(name){
+  document.querySelectorAll('.tab-btn').forEach(function(b){
+    b.classList.toggle('active', b.dataset.tab===name);
+  });
+  document.querySelectorAll('.tab-content').forEach(function(t){
+    t.classList.toggle('active', t.id==='tab-'+name);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  updateStats();
+  var btn = document.getElementById('theme-label');
+  if(btn){
+    var current = document.documentElement.getAttribute('data-theme');
+    btn.textContent = current==='dark' ? '☀️ Light mode' : '🌙 Dark mode';
+  }
+});
+</script>
+</body>
+</html>

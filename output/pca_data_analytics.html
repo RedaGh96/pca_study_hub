@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PCA &ndash; DATA &amp; ANALYTICS</title>
+<style>
+/* ── THEME TOKENS ── */
+:root {
+  --bg:#0f1117;--surface:#1a1d27;--card:#1e2130;--border:#2e3250;
+  --accent:#4f8ef7;--green:#3ecf7c;--red:#f75f5f;--yellow:#f7c948;
+  --text:#e4e8f0;--muted:#7b8099;--radius:14px;
+  --shadow:0 8px 28px #0006;
+}
+[data-theme="light"] {
+  --bg:#f0f2f8;--surface:#ffffff;--card:#ffffff;--border:#d0d5e8;
+  --accent:#2563eb;--green:#16a34a;--red:#dc2626;--yellow:#ca8a04;
+  --text:#1e2130;--muted:#64748b;
+  --shadow:0 4px 20px #0001;
+}
+
+/* ── RESET ── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;
+  min-height:100vh;padding:2rem 1rem;transition:background .25s,color .25s}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;
+  max-width:1200px;margin:0 auto 1.5rem}
+h1{font-size:1.7rem;font-weight:700}
+.subtitle{text-align:center;color:var(--muted);font-size:.9rem;margin-bottom:2rem}
+
+/* ── THEME TOGGLE ── */
+.theme-toggle{display:flex;align-items:center;gap:.5rem;cursor:pointer;
+  background:var(--surface);border:1px solid var(--border);border-radius:99px;
+  padding:.35rem .9rem;font-size:.8rem;color:var(--muted);
+  transition:all .2s;user-select:none}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.toggle-track{width:36px;height:20px;border-radius:99px;background:var(--border);
+  position:relative;transition:background .25s}
+.toggle-thumb{width:14px;height:14px;border-radius:50%;background:#fff;
+  position:absolute;top:3px;left:3px;transition:transform .25s,background .25s;
+  box-shadow:0 1px 3px #0003}
+[data-theme="light"] .toggle-track{background:var(--accent)}
+[data-theme="light"] .toggle-thumb{transform:translateX(16px)}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:.5rem;justify-content:center;margin-bottom:2rem;flex-wrap:wrap}
+.tab-btn{padding:.5rem 1.4rem;border-radius:99px;border:2px solid var(--border);
+  background:transparent;color:var(--muted);cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.tab-content{display:none}.tab-content.active{display:block}
+
+/* ── FLASHCARDS ── */
+.deck-header{text-align:center;color:var(--muted);margin-bottom:1.5rem;font-size:.85rem}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.2rem}
+.flashcard{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.flashcard:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.card-header{display:flex;align-items:center;justify-content:space-between;
+  padding:.75rem 1rem;border-bottom:1px solid var(--border);background:var(--surface)}
+.card-title{font-weight:700;font-size:.95rem}
+.badge{font-size:.7rem;padding:.2rem .6rem;border-radius:99px;
+  background:var(--border);color:var(--accent)}
+.card-body{padding:1.1rem}
+.card-front p{font-size:.85rem;color:var(--muted);margin-bottom:.5rem}
+.card-front h3{font-size:1rem;font-weight:600;line-height:1.4}
+.card-back{display:none}
+.flashcard.flipped .card-front{display:none}
+.flashcard.flipped .card-back{display:block}
+.field{margin-bottom:.75rem}
+.field-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--accent);margin-bottom:.25rem}
+.field-value{font-size:.82rem;color:var(--text);line-height:1.5}
+.flip-hint{font-size:.7rem;color:var(--muted);text-align:right;margin-top:.6rem}
+.scenario-box{background:var(--surface);border-left:3px solid var(--yellow);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;margin-top:.5rem;font-size:.82rem}
+.answer-box{background:var(--surface);border-left:3px solid var(--green);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;margin-top:.4rem;font-size:.82rem}
+
+/* ── Q&A ── */
+.qa-grid{display:grid;gap:1.2rem}
+.qa-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.qa-header{display:flex;align-items:center;justify-content:space-between;
+  padding:.7rem 1rem;background:var(--surface);border-bottom:1px solid var(--border)}
+.qa-label{font-size:.8rem;font-weight:700;color:var(--accent)}
+.qa-url{font-size:.7rem;color:var(--muted);text-decoration:none}
+.qa-url:hover{color:var(--accent)}
+.qa-body{padding:1rem}
+.qa-question{font-size:.9rem;line-height:1.5;margin-bottom:.8rem;font-weight:500}
+.choices{list-style:none;display:grid;gap:.4rem}
+.choice{padding:.5rem .8rem;border-radius:8px;border:1px solid var(--border);
+  font-size:.82rem;cursor:pointer;transition:all .2s;user-select:none}
+.choice:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.choice.correct{background:color-mix(in srgb,var(--green) 12%,transparent);
+  border-color:var(--green);color:var(--green)}
+.choice.wrong{background:color-mix(in srgb,var(--red) 12%,transparent);
+  border-color:var(--red);color:var(--red)}
+.explanation{display:none;margin-top:.8rem;font-size:.82rem;line-height:1.5;
+  background:var(--surface);border-left:3px solid var(--accent);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;color:var(--muted)}
+.explanation.visible{display:block}
+
+/* ── STATS ── */
+.stats-bar{display:flex;gap:1rem;justify-content:center;margin-bottom:1.5rem;flex-wrap:wrap}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:.5rem 1.1rem;text-align:center;min-width:90px}
+.stat-num{font-size:1.4rem;font-weight:700}
+.stat-label{font-size:.7rem;color:var(--muted)}
+.stat.green .stat-num{color:var(--green)}
+.stat.red .stat-num{color:var(--red)}
+.stat.yellow .stat-num{color:var(--yellow)}
+</style>
+<script>
+(function(){
+  var t=localStorage.getItem('pca-theme')||
+    (window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');
+  document.documentElement.setAttribute('data-theme',t);
+})();
+</script>
+</head>
+<body>
+<div class="topbar">
+  <h1>PCA &mdash; DATA &amp; ANALYTICS</h1>
+  <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+    <span id="theme-label">&#9728;&#65039; Light mode</span>
+  </button>
+</div>
+<p class="subtitle">High-signal patterns for the PCA exam.</p>
+<div class="tabs"><button class="tab-btn active" data-tab="flashcards" onclick="switchTab('flashcards')">&#128218; Flashcards</button><button class="tab-btn" data-tab="exam-qa" onclick="switchTab('exam-qa')">&#129514; Exam Q&amp;A</button></div>
+
+<div id="tab-flashcards" class="tab-content active">
+  <p class="deck-header">Showing 12 cards &mdash; click to flip</p>
+  <div class="cards-grid">
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Dataflow</span>
+    <span class="badge">Data &amp; Analytics</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Fully managed service for stream and batch data processing using Apache Beam pipelines.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">ETL and ELT pipelines; real-time analytics; event stream processing; large-scale data transformation; unified batch and streaming workloads.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Small one-off scripts; workloads that require direct control over cluster infrastructure; simple SQL-only transformations that fit better in BigQuery.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Strong scalability and fully managed execution vs. less low-level infrastructure control and a steeper development model than simpler tools.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Autoscaling helps reduce unnecessary compute cost. Use private networking, service accounts with least privilege, and streaming engine options where appropriate for secure and efficient execution.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company needs to ingest millions of real-time events, transform them continuously, and load them into analytics storage without managing servers.</div><div class="answer-box">Dataflow — it is the managed choice for scalable stream and batch processing.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Dataproc</span>
+    <span class="badge">Data &amp; Analytics</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Managed Apache Spark and Hadoop service for running open-source big data workloads on Google Cloud.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Existing Spark or Hadoop jobs; lift-and-shift big data processing; batch analytics; teams needing control over cluster configuration while still reducing operational effort.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Fully serverless event-driven pipelines where Dataflow is a better fit; small analytics jobs that do not justify cluster-based processing; workloads with no Spark or Hadoop need.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Greater compatibility with existing open-source ecosystems and more cluster control vs. more operational responsibility than fully managed serverless data processing.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use ephemeral clusters and autoscaling to limit cost. Apply least-privilege IAM, secure service accounts, and private networking for data access and cluster isolation.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">An organization already has many Apache Spark jobs and wants to move them to Google Cloud quickly with minimal refactoring.</div><div class="answer-box">Dataproc — it is the best fit for managed Spark and Hadoop migration with minimal change.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Pub/Sub</span>
+    <span class="badge">Data &amp; Analytics</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Fully managed messaging and event ingestion service for asynchronous communication between producers and consumers.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Event-driven architectures; decoupling services; ingesting telemetry and application events; buffering spikes before downstream processing.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Direct synchronous request-response interactions; workloads requiring complex queryable storage of messages; relational transactional workflows.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Excellent decoupling, elasticity, and durability vs. eventual consistency and additional complexity in downstream processing design.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Pub/Sub can absorb traffic bursts and reduce overprovisioning of consumers. Restrict publisher and subscriber permissions with narrowly scoped IAM roles and protect downstream consumers through private design patterns.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A retail platform receives unpredictable order events and must ensure multiple backend systems process them independently without losing messages.</div><div class="answer-box">Pub/Sub — it decouples producers from consumers and supports durable asynchronous event delivery.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Datalab</span>
+    <span class="badge">Data &amp; Analytics</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Interactive notebook environment for exploring, analyzing, and visualizing data on Google Cloud.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Data exploration; prototyping; notebook-based analysis; interactive work by analysts and data scientists using Google Cloud data services.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Production ETL orchestration; high-scale distributed processing; enterprise-grade scheduled data pipelines.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Fast and flexible interactive analysis experience vs. not being the right tool for productionized, scalable data pipelines.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Control access carefully because notebooks often touch sensitive datasets and credentials. Use least-privilege identities and avoid treating notebook environments as production data platforms.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A data analyst needs an interactive environment to explore datasets, run experiments, and visualize results before productionizing a workflow.</div><div class="answer-box">Datalab — it is designed for interactive notebook-based data analysis and exploration.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Streaming Analytics Pipeline</span>
+    <span class="badge">Data &amp; Analytics</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture pattern that uses messaging and stream processing services to ingest, transform, and analyze events in near real time.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">IoT telemetry; clickstream analysis; fraud detection; monitoring systems; use cases requiring low-latency insights.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Workloads that run once per day in large scheduled batches with no need for near-real-time results.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Faster insight and responsive analytics vs. more architectural complexity and higher operational sensitivity to pipeline design.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Process only the events and enrichments required to control cost. Protect event ingestion and downstream storage with IAM, encryption, and retention controls.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A logistics company wants to process fleet sensor events in near real time and detect anomalies within seconds.</div><div class="answer-box">Use Pub/Sub for ingestion and Dataflow for real-time stream processing.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Batch Analytics Pipeline</span>
+    <span class="badge">Data &amp; Analytics</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture pattern that processes large volumes of accumulated data at scheduled intervals rather than continuously.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Daily reporting; historical transformations; large ETL jobs; cost-sensitive analytics where immediate results are not required.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Use cases with strict low-latency requirements, real-time alerting, or continuously updated dashboards.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Simpler and often cheaper than streaming for non-urgent data vs. delayed availability of insights.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Schedule jobs to align with lower-cost processing windows when possible. Secure data staging locations, cluster identities, and job permissions carefully.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A business only needs overnight processing of the day’s sales records and wants to reuse existing Spark jobs.</div><div class="answer-box">Use a batch analytics pipeline with Dataproc for scheduled processing.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">ETL with Dataflow</span>
+    <span class="badge">Data &amp; Analytics</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Managed extract-transform-load architecture using Dataflow to ingest, clean, transform, and load data into downstream analytical systems.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Large-scale data transformation; event enrichment; schema normalization; pipelines combining batch and stream ingestion.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Tiny datasets or simple transformations that can be handled directly inside a warehouse with SQL alone.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Scalable managed data processing with unified programming model vs. more pipeline development effort than simpler point tools.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Dataflow autoscaling helps match resources to workload size. Use secure service accounts and minimize access to only the source and destination systems needed by the pipeline.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company must normalize raw event data from multiple sources before loading curated records into an analytics platform.</div><div class="answer-box">Use Dataflow to build the ETL pipeline because it handles transformation at scale in both streaming and batch modes.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Spark-Based Data Processing</span>
+    <span class="badge">Data &amp; Analytics</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Analytics architecture based on Apache Spark for distributed processing of large datasets, typically using Dataproc on Google Cloud.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Existing Spark ecosystems; data engineering teams with Spark expertise; large batch transformations; ML preprocessing at cluster scale.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Small interactive analysis, simple messaging needs, or fully managed streaming designs where Dataflow is more appropriate.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Powerful open-source processing ecosystem and workload portability vs. greater operational management than serverless data processing services.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use temporary clusters for jobs instead of permanent idle clusters where possible. Restrict cluster access and secure data paths through private connectivity and IAM.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company has a mature Spark codebase and wants to process petabyte-scale historical logs in Google Cloud without rewriting everything.</div><div class="answer-box">Use Dataproc to run the Spark-based processing workloads with minimal refactoring.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Asynchronous Event Ingestion</span>
+    <span class="badge">Data &amp; Analytics</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Data architecture pattern where events are accepted and stored durably before downstream processing happens independently.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Bursty producers; independent downstream consumers; resilient ingestion layers; fan-out architectures with multiple subscribers.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Workflows where the client must wait synchronously for all downstream actions to complete before receiving a response.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better durability and decoupling vs. increased eventual consistency and downstream orchestration complexity.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">This pattern reduces the need to overprovision consumers for spikes. Control who can publish and subscribe, and protect event retention policies appropriately.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">An application receives highly variable upload activity and several systems need to process each event independently at their own speed.</div><div class="answer-box">Use Pub/Sub for asynchronous event ingestion and decoupled fan-out processing.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Interactive Data Exploration</span>
+    <span class="badge">Data &amp; Analytics</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Notebook-oriented data analysis workflow that allows users to query, inspect, visualize, and experiment with datasets interactively.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Prototyping, ad hoc exploration, analyst workflows, experimentation before building production data pipelines.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Scheduled production processing, SLA-bound transformations, or large-scale distributed production workloads.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Very flexible and user-friendly for exploration vs. weak suitability for hardened, repeatable, production-grade operations.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Notebook sessions should be controlled tightly because they may expose broad dataset access. Use least-privilege identities and avoid storing secrets directly inside notebooks.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A data team wants to investigate a new dataset interactively before deciding how to productionize the pipeline.</div><div class="answer-box">Use Datalab for interactive exploration, then move production workflows to the appropriate managed processing service.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Decoupled Analytics Architecture</span>
+    <span class="badge">Data &amp; Analytics</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture approach that separates ingestion, processing, storage, and consumption into independent layers connected through durable interfaces.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Scalable data platforms; multi-team environments; evolving analytics ecosystems; workloads where independent scaling and failure isolation matter.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Very small single-purpose pipelines where a layered architecture would add unnecessary complexity.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better scalability, resilience, and maintainability vs. more design complexity and more components to govern.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Decoupling can reduce waste by allowing each layer to scale independently. Apply IAM boundaries and data access controls separately at ingestion, processing, and storage layers.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company wants to ingest events once, process them in multiple ways, and allow several downstream systems to evolve independently.</div><div class="answer-box">Use a decoupled analytics architecture with Pub/Sub for ingestion and separate processing services such as Dataflow or Dataproc as needed.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Data Processing Service Selection</span>
+    <span class="badge">Data &amp; Analytics</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture decision process for choosing between Dataflow, Dataproc, Pub/Sub, and Datalab based on workload type and operational needs.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Exam scenarios where multiple analytics tools appear possible and the correct answer depends on whether the need is messaging, serverless processing, cluster-based processing, or interactive analysis.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Choosing a tool based only on familiarity instead of workload pattern, team skillset, and operational requirements.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Correct service selection improves cost, scalability, and simplicity; poor selection increases operational burden and redesign risk.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Pick the simplest managed option that satisfies the need. Use least-privilege access and avoid exposing processing systems or notebook environments unnecessarily.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A question asks for the best service for durable event ingestion, another for managed stream processing, another for existing Spark jobs, and another for interactive notebook exploration.</div><div class="answer-box">Pub/Sub for messaging ingestion, Dataflow for managed stream or batch processing, Dataproc for Spark or Hadoop workloads, and Datalab for interactive analysis.</div></div>
+    </div>
+  </div>
+</div></div>
+</div>
+
+<div id="tab-exam-qa" class="tab-content">
+  <div class="stats-bar">
+    <div class="stat green"><div class="stat-num" id="s-correct">0</div><div class="stat-label">Correct</div></div>
+    <div class="stat red"><div class="stat-num" id="s-wrong">0</div><div class="stat-label">Wrong</div></div>
+    <div class="stat yellow"><div class="stat-num" id="s-total">0</div><div class="stat-label">Total</div></div>
+  </div>
+  <div class="qa-grid">
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 12</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company has successfully migrated to the cloud and wants to analyze their data stream to optimize operations. They do not have any existing code for this analysis, so they are exploring all their options. These options include a mix of batch and stream processing, as they are running some hourly jobs and live- processing some data as it comes in. Which technology should they use for this?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Google Cloud Dataproc</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Google Cloud Dataflow</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Google Container Engine with Bigtable</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Google Compute Engine with Google BigQuery</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 18</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company is forecasting a sharp increase in the number and size of Apache Spark and Hadoop jobs being run on your local datacenter. You want to utilize the cloud to help you scale this upcoming demand with the least amount of operations work and code change. Which product should you use?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Google Cloud Dataflow</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Google Cloud Dataproc</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Google Compute Engine</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Google Kubernetes Engine</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 48</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company has multiple on-premises systems that serve as sources for reporting. The data has not been maintained well and has become degraded over time. You want to use Google-recommended practices to detect anomalies in your company data. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Upload your files into Cloud Storage. Use Cloud Datalab to explore and clean your data.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Upload your files into Cloud Storage. Use Cloud Dataprep to explore and clean your data.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Connect Cloud Datalab to your on-premises systems. Use Cloud Datalab to explore and clean your data.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Connect Cloud Dataprep to your on-premises systems. Use Cloud Dataprep to explore and clean your data.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 83</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your BigQuery project has several users. For audit purposes, you need to see how many queries each user ran in the last month. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Connect Google Data Studio to BigQuery. Create a dimension for the users and a metric for the amount of queries per user.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.In the BigQuery interface, execute a query on the JOBS table to get the required information.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Use &#x27;bq show&#x27; to list all jobs. Per job, use &#x27;bq ls&#x27; to list job information and get the required information.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Use Cloud Audit Logging to view Cloud Audit Logs, and create a filter on the query operation to get the required information.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 85</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company captures all web traffic data in Google Analytics 360 and stores it in BigQuery. Each country has its own dataset. Each dataset has multiple tables. You want analysts from each country to be able to see and query only the data for their respective countries. How should you configure the access rights?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Create a group per country. Add analysts to their respective country-groups. Create a single group &#x27;all_analysts&#x27;, and add all country-groups as members. Grant the &#x27;all_analysts&#x27; group the IAM role of BigQuery jobUser. Share the appropriate dataset with view access with each respective analyst country-group.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Create a group per country. Add analysts to their respective country-groups. Create a single group &#x27;all_analysts&#x27;, and add all country-groups as members. Grant the &#x27;all_analysts&#x27; group the IAM role of BigQuery jobUser. Share the appropriate tables with view access with each respective analyst country-group.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Create a group per country. Add analysts to their respective country-groups. Create a single group &#x27;all_analysts&#x27;, and add all country-groups as members. Grant the &#x27;all_analysts&#x27; group the IAM role of BigQuery dataViewer. Share the appropriate dataset with view access with each respective analyst country- group.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create a group per country. Add analysts to their respective country-groups. Create a single group &#x27;all_analysts&#x27;, and add all country-groups as members. Grant the &#x27;all_analysts&#x27; group the IAM role of BigQuery dataViewer. Share the appropriate table with view access with each respective analyst country-group.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 102</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are developing a globally scaled frontend for a legacy streaming backend data API. This API expects events in strict chronological order with no repeat data for proper processing. Which products should you deploy to ensure guaranteed-once FIFO (first-in, first-out) delivery of data?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Cloud Pub/Sub alone</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Cloud Pub/Sub to Cloud Dataflow</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Cloud Pub/Sub to Stackdriver</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Cloud Pub/Sub to Cloud SQL</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 4 | Question 5</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/60405-exam-professional-cloud-architect-topic-4-question-5/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the EHR Healthcare case study. You are a developer on the EHR customer portal team. Your team recently migrated the customer portal application to Google Cloud. The load has increased on the application servers, and now the application is logging many timeout errors. You recently incorporated Pub/Sub into the application architecture, and the application is not logging any Pub/Sub publishing errors. You want to improve publishing latency. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Increase the Pub/Sub Total Timeout retry value.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Move from a Pub/Sub subscriber pull model to a push model.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Turn off Pub/Sub message batching.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create a backup Pub/Sub message queue.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 5 | Question 6</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/11831-exam-professional-cloud-architect-topic-5-question-6/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Mountkirk Games wants to set up a real-time analytics platform for their new game. The new platform must meet their technical requirements. Which combination of Google technologies will meet all of their requirements?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Kubernetes Engine, Cloud Pub/Sub, and Cloud SQL</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Cloud Dataflow, Cloud Storage, Cloud Pub/Sub, and BigQuery</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Cloud SQL, Cloud Storage, Cloud Pub/Sub, and Cloud Dataflow</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Cloud Dataproc, Cloud Pub/Sub, Cloud SQL, and Cloud Dataflow</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">E.Cloud Pub/Sub, Compute Engine, Cloud Storage, and Cloud Dataproc</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 6 | Question 1</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/11888-exam-professional-cloud-architect-topic-6-question-1/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the Mountkirk Games case study. Mountkirk Games wants to migrate from their current analytics and statistics reporting model to one that meets their technical requirements on Google Cloud Platform. Which two steps should be part of their migration plan? (Choose two.)</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Evaluate the impact of migrating their current batch ETL code to Cloud Dataflow.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Write a schema migration plan to denormalize data for better performance in BigQuery.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Draw an architecture diagram that shows how to move from a single MySQL database to a MySQL cluster.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Load 10 TB of analytics data from a previous game into a Cloud SQL instance, and run test queries against the full dataset to confirm that they complete successfully.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">E.Integrate Cloud Armor to defend against possible SQL injection attacks in analytics files uploaded to Cloud Storage.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 8 | Question 4</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/6657-exam-professional-cloud-architect-topic-8-question-4/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">TerramEarth plans to connect all 20 million vehicles in the field to the cloud. This increases the volume to 20 million 600 byte records a second for 40 TB an hour. How should you design the data ingestion?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Vehicles write data directly to GCS</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Vehicles write data directly to Google Cloud Pub/Sub</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Vehicles stream data directly to Google BigQuery</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Vehicles continue to write data using the existing system (FTP)</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 8 | Question 11</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/8250-exam-professional-cloud-architect-topic-8-question-11/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Operational parameters such as oil pressure are adjustable on each of TerramEarth&#x27;s vehicles to increase their efficiency, depending on their environmental conditions. Your primary goal is to increase the operating efficiency of all 20 million cellular and unconnected vehicles in the field. How can you accomplish this goal?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Have you engineers inspect the data for patterns, and then create an algorithm with rules that make operational adjustments automatically</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Capture all operating data, train machine learning models that identify ideal operations, and run locally to make operational adjustments automatically</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Implement a Google Cloud Dataflow streaming job with a sliding window, and use Google Cloud Messaging (GCM) to make operational adjustments automatically</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Capture all operating data, train machine learning models that identify ideal operations, and host in Google Cloud Machine Learning (ML) Platform to make operational adjustments automatically</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 9 | Question 4</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/13467-exam-professional-cloud-architect-topic-9-question-4/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the TerramEarth case study. A new architecture that writes all incoming data to BigQuery has been introduced. You notice that the data is dirty, and want to ensure data quality on an automated daily basis while managing cost. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Set up a streaming Cloud Dataflow job, receiving data by the ingestion process. Clean the data in a Cloud Dataflow pipeline.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Create a Cloud Function that reads data from BigQuery and cleans it. Trigger the Cloud Function from a Compute Engine instance.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Create a SQL statement on the data in BigQuery, and save it as a view. Run the view daily, and save the result to a new table.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Use Cloud Dataprep and configure the BigQuery tables as the source. Schedule a daily job to clean the data.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 9 | Question 5</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/14729-exam-professional-cloud-architect-topic-9-question-5/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the TerramEarth case study. Considering the technical requirements, how should you reduce the unplanned vehicle downtime in GCP?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Use BigQuery as the data warehouse. Connect all vehicles to the network and stream data into BigQuery using Cloud Pub/Sub and Cloud Dataflow. Use Google Data Studio for analysis and reporting.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Use BigQuery as the data warehouse. Connect all vehicles to the network and upload gzip files to a Multi-Regional Cloud Storage bucket using gcloud. Use Google Data Studio for analysis and reporting.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Use Cloud Dataproc Hive as the data warehouse. Upload gzip files to a Multi-Regional Cloud Storage bucket. Upload this data into BigQuery using gcloud. Use Google Data Studio for analysis and reporting.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Use Cloud Dataproc Hive as the data warehouse. Directly stream data into partitioned Hive tables. Use Pig scripts to analyze data.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div></div>
+</div>
+<script>
+/* ── THEME ── */
+(function(){
+  var saved = localStorage.getItem('pca-theme') ||
+    (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+
+function toggleTheme(){
+  var next = document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('pca-theme', next);
+  var btn = document.getElementById('theme-label');
+  if(btn) btn.textContent = next==='dark' ? '☀️ Light mode' : '🌙 Dark mode';
+}
+
+/* ── FLASHCARDS ── */
+function flip(el){ el.classList.toggle('flipped'); }
+
+/* ── Q&A ── */
+var score = {correct:0, wrong:0};
+function updateStats(){
+  document.getElementById('s-correct').textContent = score.correct;
+  document.getElementById('s-wrong').textContent   = score.wrong;
+  document.getElementById('s-total').textContent   =
+    document.querySelectorAll('.qa-card').length;
+}
+
+function answer(btn, isCorrect){
+  var card = btn.closest('.qa-card');
+  if(card.dataset.answered) return;
+  card.dataset.answered = '1';
+  card.querySelectorAll('.choice').forEach(function(c){
+    if(c.dataset.correct==='1') c.classList.add('correct');
+    else if(c===btn) c.classList.add('wrong');
+  });
+  card.querySelector('.explanation').classList.add('visible');
+  if(isCorrect) score.correct++; else score.wrong++;
+  updateStats();
+}
+
+/* ── TABS ── */
+function switchTab(name){
+  document.querySelectorAll('.tab-btn').forEach(function(b){
+    b.classList.toggle('active', b.dataset.tab===name);
+  });
+  document.querySelectorAll('.tab-content').forEach(function(t){
+    t.classList.toggle('active', t.id==='tab-'+name);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  updateStats();
+  var btn = document.getElementById('theme-label');
+  if(btn){
+    var current = document.documentElement.getAttribute('data-theme');
+    btn.textContent = current==='dark' ? '☀️ Light mode' : '🌙 Dark mode';
+  }
+});
+</script>
+</body>
+</html>

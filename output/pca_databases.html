@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PCA &ndash; DATABASES</title>
+<style>
+/* ── THEME TOKENS ── */
+:root {
+  --bg:#0f1117;--surface:#1a1d27;--card:#1e2130;--border:#2e3250;
+  --accent:#4f8ef7;--green:#3ecf7c;--red:#f75f5f;--yellow:#f7c948;
+  --text:#e4e8f0;--muted:#7b8099;--radius:14px;
+  --shadow:0 8px 28px #0006;
+}
+[data-theme="light"] {
+  --bg:#f0f2f8;--surface:#ffffff;--card:#ffffff;--border:#d0d5e8;
+  --accent:#2563eb;--green:#16a34a;--red:#dc2626;--yellow:#ca8a04;
+  --text:#1e2130;--muted:#64748b;
+  --shadow:0 4px 20px #0001;
+}
+
+/* ── RESET ── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;
+  min-height:100vh;padding:2rem 1rem;transition:background .25s,color .25s}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;
+  max-width:1200px;margin:0 auto 1.5rem}
+h1{font-size:1.7rem;font-weight:700}
+.subtitle{text-align:center;color:var(--muted);font-size:.9rem;margin-bottom:2rem}
+
+/* ── THEME TOGGLE ── */
+.theme-toggle{display:flex;align-items:center;gap:.5rem;cursor:pointer;
+  background:var(--surface);border:1px solid var(--border);border-radius:99px;
+  padding:.35rem .9rem;font-size:.8rem;color:var(--muted);
+  transition:all .2s;user-select:none}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.toggle-track{width:36px;height:20px;border-radius:99px;background:var(--border);
+  position:relative;transition:background .25s}
+.toggle-thumb{width:14px;height:14px;border-radius:50%;background:#fff;
+  position:absolute;top:3px;left:3px;transition:transform .25s,background .25s;
+  box-shadow:0 1px 3px #0003}
+[data-theme="light"] .toggle-track{background:var(--accent)}
+[data-theme="light"] .toggle-thumb{transform:translateX(16px)}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:.5rem;justify-content:center;margin-bottom:2rem;flex-wrap:wrap}
+.tab-btn{padding:.5rem 1.4rem;border-radius:99px;border:2px solid var(--border);
+  background:transparent;color:var(--muted);cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.tab-content{display:none}.tab-content.active{display:block}
+
+/* ── FLASHCARDS ── */
+.deck-header{text-align:center;color:var(--muted);margin-bottom:1.5rem;font-size:.85rem}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.2rem}
+.flashcard{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.flashcard:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.card-header{display:flex;align-items:center;justify-content:space-between;
+  padding:.75rem 1rem;border-bottom:1px solid var(--border);background:var(--surface)}
+.card-title{font-weight:700;font-size:.95rem}
+.badge{font-size:.7rem;padding:.2rem .6rem;border-radius:99px;
+  background:var(--border);color:var(--accent)}
+.card-body{padding:1.1rem}
+.card-front p{font-size:.85rem;color:var(--muted);margin-bottom:.5rem}
+.card-front h3{font-size:1rem;font-weight:600;line-height:1.4}
+.card-back{display:none}
+.flashcard.flipped .card-front{display:none}
+.flashcard.flipped .card-back{display:block}
+.field{margin-bottom:.75rem}
+.field-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--accent);margin-bottom:.25rem}
+.field-value{font-size:.82rem;color:var(--text);line-height:1.5}
+.flip-hint{font-size:.7rem;color:var(--muted);text-align:right;margin-top:.6rem}
+.scenario-box{background:var(--surface);border-left:3px solid var(--yellow);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;margin-top:.5rem;font-size:.82rem}
+.answer-box{background:var(--surface);border-left:3px solid var(--green);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;margin-top:.4rem;font-size:.82rem}
+
+/* ── Q&A ── */
+.qa-grid{display:grid;gap:1.2rem}
+.qa-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.qa-header{display:flex;align-items:center;justify-content:space-between;
+  padding:.7rem 1rem;background:var(--surface);border-bottom:1px solid var(--border)}
+.qa-label{font-size:.8rem;font-weight:700;color:var(--accent)}
+.qa-url{font-size:.7rem;color:var(--muted);text-decoration:none}
+.qa-url:hover{color:var(--accent)}
+.qa-body{padding:1rem}
+.qa-question{font-size:.9rem;line-height:1.5;margin-bottom:.8rem;font-weight:500}
+.choices{list-style:none;display:grid;gap:.4rem}
+.choice{padding:.5rem .8rem;border-radius:8px;border:1px solid var(--border);
+  font-size:.82rem;cursor:pointer;transition:all .2s;user-select:none}
+.choice:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.choice.correct{background:color-mix(in srgb,var(--green) 12%,transparent);
+  border-color:var(--green);color:var(--green)}
+.choice.wrong{background:color-mix(in srgb,var(--red) 12%,transparent);
+  border-color:var(--red);color:var(--red)}
+.explanation{display:none;margin-top:.8rem;font-size:.82rem;line-height:1.5;
+  background:var(--surface);border-left:3px solid var(--accent);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;color:var(--muted)}
+.explanation.visible{display:block}
+
+/* ── STATS ── */
+.stats-bar{display:flex;gap:1rem;justify-content:center;margin-bottom:1.5rem;flex-wrap:wrap}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:.5rem 1.1rem;text-align:center;min-width:90px}
+.stat-num{font-size:1.4rem;font-weight:700}
+.stat-label{font-size:.7rem;color:var(--muted)}
+.stat.green .stat-num{color:var(--green)}
+.stat.red .stat-num{color:var(--red)}
+.stat.yellow .stat-num{color:var(--yellow)}
+</style>
+<script>
+(function(){
+  var t=localStorage.getItem('pca-theme')||
+    (window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');
+  document.documentElement.setAttribute('data-theme',t);
+})();
+</script>
+</head>
+<body>
+<div class="topbar">
+  <h1>PCA &mdash; DATABASES</h1>
+  <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+    <span id="theme-label">&#9728;&#65039; Light mode</span>
+  </button>
+</div>
+<p class="subtitle">High-signal patterns for the PCA exam.</p>
+<div class="tabs"><button class="tab-btn active" data-tab="flashcards" onclick="switchTab('flashcards')">&#128218; Flashcards</button><button class="tab-btn" data-tab="exam-qa" onclick="switchTab('exam-qa')">&#129514; Exam Q&amp;A</button></div>
+
+<div id="tab-flashcards" class="tab-content active">
+  <p class="deck-header">Showing 13 cards &mdash; click to flip</p>
+  <div class="cards-grid">
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cloud SQL</span>
+    <span class="badge">Databases</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Fully managed relational database service for MySQL, PostgreSQL, and SQL Server workloads.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Traditional relational applications; transactional systems with moderate scale; lift-and-shift apps already built on MySQL, PostgreSQL, or SQL Server; applications needing ACID transactions and SQL joins.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Massive globally distributed relational workloads; petabyte-scale analytics; very high horizontal scaling requirements beyond a traditional relational managed database model.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Familiar relational database engines with low operational overhead vs. lower horizontal scalability than globally distributed or specialized database services.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use high availability configuration, automated backups, and private IP connectivity where possible. Apply least-privilege IAM and database authentication controls to reduce risk.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A web application built on PostgreSQL needs a managed transactional database with minimal operational burden and no major code rewrite.</div><div class="answer-box">Cloud SQL — it provides managed relational database capability for common transactional workloads.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cloud Spanner</span>
+    <span class="badge">Databases</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Fully managed relational database with strong consistency, horizontal scalability, and global distribution.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Mission-critical global applications; relational systems needing strong consistency at very large scale; financial systems; inventory platforms; globally distributed transactional applications.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Small low-cost applications; simple local relational workloads; systems where global scale and high availability requirements do not justify the cost and complexity.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Global scale, strong consistency, and high availability vs. higher cost and more specialized architecture decisions than traditional relational databases.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Spanner is powerful but often more expensive than standard relational options, so use it only when the scalability and consistency requirements justify it. Protect instances with least-privilege access, encryption controls, and regional placement aligned to compliance needs.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A multinational retailer needs a single relational database that keeps inventory consistent across regions while supporting high transactional scale.</div><div class="answer-box">Cloud Spanner — it is designed for globally distributed relational transactions with strong consistency.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Bigtable</span>
+    <span class="badge">Databases</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Fully managed NoSQL wide-column database optimized for massive scale, low-latency reads and writes, and time-series or operational analytics workloads.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">IoT telemetry; time-series data; clickstream ingestion; fraud signals; large-scale operational workloads requiring high throughput and low latency.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Relational data with joins; small datasets; ad hoc SQL analytics; applications needing complex multi-row transactions or traditional relational schemas.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Exceptional throughput and low latency at scale vs. no relational joins and a data model that requires access-pattern-driven design.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Bigtable is most efficient when designed around row-key patterns and sustained workload scale. Use IAM, private connectivity, and careful schema design to control both cost and access.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A platform must ingest millions of sensor readings per second and provide fast lookups over recent and historical time-series data.</div><div class="answer-box">Bigtable — it is optimized for high-scale time-series and operational NoSQL workloads.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Firestore</span>
+    <span class="badge">Databases</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Fully managed serverless NoSQL document database for mobile, web, and application development.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">User profiles; product catalogs; mobile and web application backends; hierarchical JSON-like data; apps needing flexible schema and easy developer integration.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Complex relational joins; large-scale analytical warehousing; workloads requiring full traditional SQL semantics; extreme high-throughput time-series designs better suited for Bigtable.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Flexible document model and simple application development vs. less suitability for relational workloads and large analytical processing.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Firestore scales automatically and reduces infrastructure management, but document reads and writes should be designed carefully to control cost. Secure collections with IAM, application-layer access controls, and least-privilege service identities.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A mobile application needs a backend database for user documents and app state with flexible schema and easy scaling.</div><div class="answer-box">Firestore — it is the best fit for serverless document-oriented application data.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Relational OLTP Database Design</span>
+    <span class="badge">Databases</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Database design pattern for transactional applications requiring structured schema, SQL queries, ACID transactions, and referential relationships.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Order processing systems; customer records; ERP apps; web applications with relational business logic; moderate-scale transactional systems.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Petabyte-scale analytics, event streams, time-series ingestion, or semi-structured document-heavy mobile workloads.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Strong transactional integrity and familiar SQL modeling vs. less elasticity than specialized NoSQL or globally distributed database options.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Choose the simplest relational managed service that meets the scale requirement to avoid unnecessary complexity and spend. Use backups, high availability, and private access patterns to protect production data.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A business system needs transactions, joins, and familiar SQL semantics, but it does not require global horizontal scale.</div><div class="answer-box">Use Cloud SQL for standard managed relational OLTP workloads.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Global Relational Database Design</span>
+    <span class="badge">Databases</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Database architecture for relational transactions across regions with strong consistency and high availability.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Financial applications; global inventory; critical transactional systems spanning multiple regions; workloads needing horizontal scalability without losing relational guarantees.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Small or local transactional applications where traditional managed relational databases are sufficient and cheaper.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Strong consistency and global scale vs. higher cost and more deliberate schema and architecture planning.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Only choose this design when requirements explicitly demand global consistency and scale. Ensure access controls, encryption policies, and regional compliance settings are designed at the start.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">An enterprise requires one globally available relational backend for mission-critical transactions across several continents.</div><div class="answer-box">Use Cloud Spanner for globally distributed relational database design.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Analytical Warehouse Design</span>
+    <span class="badge">Databases</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Database architecture pattern optimized for large-scale read-heavy analytical queries over structured and semi-structured historical data.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Business intelligence; reporting; large SQL aggregations; dashboarding; data science exploration over large datasets.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Frequent row-by-row transactions, application backends needing millisecond updates, or operational systems with heavy write concurrency.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">High-performance analytics and elastic scale vs. poor fit for transactional workloads.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Control cost with partitioning, clustering, efficient query design, and lifecycle management. Use role-based access, views, and dataset security to restrict sensitive analytical data.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">Analysts need to query years of business data with large SQL aggregations and interactive reporting.</div><div class="answer-box">Use BigQuery for analytical warehouse design.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Time-Series NoSQL Design</span>
+    <span class="badge">Databases</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Database design approach optimized for very high write throughput, low-latency reads, and access patterns centered on timestamped or key-ordered data.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Sensor telemetry; monitoring data; clickstreams; financial tick feeds; large operational event storage.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Complex relational joins, ad hoc SQL-heavy analytics, or low-scale application databases with simple transactional needs.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Excellent scalability and performance for key-based access patterns vs. limited relational capabilities and the need for careful schema design.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Schema and row-key design drive performance and cost efficiency, so poor modeling can create hotspots and waste resources. Restrict access through IAM and isolate production data paths with private networking where appropriate.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A system must store and retrieve massive volumes of timestamped device data with very high ingestion throughput.</div><div class="answer-box">Use Bigtable for time-series NoSQL design.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Document Database Design</span>
+    <span class="badge">Databases</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Database architecture based on flexible JSON-like documents instead of fixed relational tables.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Mobile and web applications; rapidly evolving schemas; user-centric data; content metadata; application state and profile storage.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Heavily relational systems requiring many joins and strict normalized schemas, or high-scale analytical warehousing.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Developer agility and schema flexibility vs. weaker fit for complex relational workloads.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Flexible models can simplify development, but document access patterns should be designed to avoid excessive read and write costs. Apply least-privilege access and avoid exposing broad document collections unnecessarily.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A startup is building a mobile app backend and expects the schema to evolve frequently as product features change.</div><div class="answer-box">Use Firestore for document database design.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Transactional vs Analytical Separation</span>
+    <span class="badge">Databases</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture principle that separates operational transactional databases from analytical reporting systems to optimize each workload independently.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Businesses running production applications and also needing large-scale reporting or BI on the same business data.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Trying to force one database to perform both heavy OLTP and heavy OLAP equally well.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better performance and scalability for each workload type vs. added architecture for data movement and synchronization.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Separating OLTP and OLAP avoids overloading transactional systems and often lowers operational risk. Secure both environments independently and control what production data is replicated into analytics systems.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company’s transactional application slows down whenever analysts run large reporting queries against the same database.</div><div class="answer-box">Separate the workloads by using Cloud SQL or Spanner for transactions and BigQuery for analytics.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Database Selection by Consistency and Scale</span>
+    <span class="badge">Databases</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture decision process that chooses databases based on required consistency, schema model, query style, scaling behavior, and workload pattern.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Exam questions where several database options seem possible and the right answer depends on transaction semantics, global scale, throughput, or schema flexibility.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Choosing a database based only on familiarity or brand preference rather than workload requirements.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Correct database selection improves performance, resilience, and cost efficiency; poor selection causes operational pain and expensive redesign later.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Pick the simplest database that satisfies the stated need, then apply backups, encryption, IAM, and network controls appropriate to that service. Overengineering database choice often increases both cost and complexity.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">One workload needs petabyte analytics, another needs standard relational transactions, another needs global consistency, another needs time-series throughput, and another needs flexible mobile app documents.</div><div class="answer-box">Use BigQuery for analytics, Cloud SQL for standard relational OLTP, Spanner for global relational scale, Bigtable for high-throughput time-series NoSQL, and Firestore for document-oriented application data.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">High Availability for Databases</span>
+    <span class="badge">Databases</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Design approach that removes database single points of failure through replication, failover configuration, and managed resilience features.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Production systems where downtime has business impact and the database is critical to application availability.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Assuming backups alone provide high availability, or deploying a single-instance database for a critical workload without failover planning.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better uptime and resilience vs. higher cost and potentially more configuration complexity.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Enable managed high availability features where supported and combine them with backups because HA does not replace restore protection. Restrict administrative access and monitor failover behavior to avoid operational surprises.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A production transactional database must remain available during instance failure with minimal manual intervention.</div><div class="answer-box">Use a high-availability database configuration rather than relying only on backups or a single-instance deployment.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Database Migration with Minimal Refactoring</span>
+    <span class="badge">Databases</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Migration approach that moves existing databases to the closest managed target that preserves application compatibility and minimizes code change.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Legacy applications, short migration timelines, risk-sensitive environments, and systems already tied closely to a known relational engine.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Greenfield applications that could benefit more from redesigning for cloud-native database models.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Faster, lower-risk migration vs. potentially missing long-term optimization opportunities from deeper redesign.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Choosing a compatible managed target lowers migration risk and often reduces operations burden immediately. Preserve backups, access controls, encryption, and network restrictions during and after the migration.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">An application using MySQL must move quickly to Google Cloud with minimal database engine changes.</div><div class="answer-box">Use Cloud SQL as the managed relational target for minimal-refactoring migration.</div></div>
+    </div>
+  </div>
+</div></div>
+</div>
+
+<div id="tab-exam-qa" class="tab-content">
+  <div class="stats-bar">
+    <div class="stat green"><div class="stat-num" id="s-correct">0</div><div class="stat-label">Correct</div></div>
+    <div class="stat red"><div class="stat-num" id="s-wrong">0</div><div class="stat-label">Wrong</div></div>
+    <div class="stat yellow"><div class="stat-num" id="s-total">0</div><div class="stat-label">Total</div></div>
+  </div>
+  <div class="qa-grid">
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 2</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company plans to migrate a multi-petabyte data set to the cloud. The data set must be available 24hrs a day. Your business analysts have experience only with using a SQL interface. How should you store the data to optimize it for ease of analysis?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Load data into Google BigQuery</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Insert data into Google Cloud SQL</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Put flat files into Google Cloud Storage</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Stream data into Google Cloud Datastore</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 3</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">The operations manager asks you for a list of recommended practices that she should consider when migrating a J2EE application to the cloud. Which three practices should you recommend? (Choose three.)</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Port the application code to run on Google App Engine</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Integrate Cloud Dataflow into the application to capture real-time metrics</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Instrument the application with a monitoring tool like Stackdriver Debugger</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Select an automation framework to reliably provision the cloud infrastructure</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">E.Deploy a continuous integration tool with automated testing in a staging environment</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">F.Migrate from MySQL to a managed NoSQL database like Google Cloud Datastore or Bigtable</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 4</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">A news feed web service has the following code running on Google App Engine. During peak load, users report that they can see news articles they already viewed. What is the most likely cause of this problem?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.The session variable is local to just a single instance</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.The session variable is being overwritten in Cloud Datastore</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.The URL of the API needs to be modified to prevent caching</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.The HTTP Expires header needs to be set to -1 stop caching</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 16</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You have been asked to select the storage system for the click-data of your company&#x27;s large portfolio of websites. This data is streamed in from a custom website analytics package at a typical rate of 6,000 clicks per minute. With bursts of up to 8,500 clicks per second. It must have been stored for future analysis by your data science and user experience teams. Which storage infrastructure should you choose?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Google Cloud SQL</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Google Cloud Bigtable</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Google Cloud Storage</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Google Cloud Datastore</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 20</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You want to optimize the performance of an accurate, real-time, weather-charting application. The data comes from 50,000 sensors sending 10 readings a second, in the format of a timestamp and sensor reading. Where should you store the data?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Google BigQuery</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Google Cloud SQL</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Google Cloud Bigtable</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Google Cloud Storage</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 35</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company wants to try out the cloud with low risk. They want to archive approximately 100 TB of their log data to the cloud and test the analytics features available to them there, while also retaining that data as a long-term disaster recovery backup. Which two steps should you take? (Choose two.)</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Load logs into Google BigQuery</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Load logs into Google Cloud SQL</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Import logs into Google Stackdriver</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Insert logs into Google Cloud Bigtable</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">E.Upload log files into Google Cloud Storage</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 41</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your customer support tool logs all email and chat conversations to Cloud Bigtable for retention and analysis. What is the recommended approach for sanitizing this data of personally identifiable information or payment card information before initial storage?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Hash all data using SHA256</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Encrypt all data using elliptic curve cryptography</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.De-identify the data with the Cloud Data Loss Prevention API</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Use regular expressions to find and redact phone numbers, email addresses, and credit card numbers</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 57</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company is using BigQuery as its enterprise data warehouse. Data is distributed over several Google Cloud projects. All queries on BigQuery need to be billed on a single project. You want to make sure that no query costs are incurred on the projects that contain the data. Users should be able to query the datasets, but not edit them. How should you configure users&#x27; access roles?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Add all users to a group. Grant the group the role of BigQuery user on the billing project and BigQuery dataViewer on the projects that contain the data.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Add all users to a group. Grant the group the roles of BigQuery dataViewer on the billing project and BigQuery user on the projects that contain the data.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Add all users to a group. Grant the group the roles of BigQuery jobUser on the billing project and BigQuery dataViewer on the projects that contain the data.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Add all users to a group. Grant the group the roles of BigQuery dataViewer on the billing project and BigQuery jobUser on the projects that contain the data.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 60</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You need to set up Microsoft SQL Server on GCP. Management requires that there&#x27;s no downtime in case of a data center outage in any of the zones within a GCP region. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Configure a Cloud SQL instance with high availability enabled.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Configure a Cloud Spanner instance with a regional instance configuration.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Set up SQL Server on Compute Engine, using Always On Availability Groups using Windows Failover Clustering. Place nodes in different subnets.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Set up SQL Server Always On Availability Groups using Windows Failover Clustering. Place nodes in different zones.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 64</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are creating an App Engine application that uses Cloud Datastore as its persistence layer. You need to retrieve several root entities for which you have the identifiers. You want to minimize the overhead in operations performed by Cloud Datastore. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Create the Key object for each Entity and run a batch get operation</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Create the Key object for each Entity and run multiple get operations, one operation for each entity</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Use the identifiers to create a query filter and run a batch query operation</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Use the identifiers to create a query filter and run multiple query operations, one operation for each entity</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 66</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your customer wants to capture multiple GBs of aggregate real-time key performance indicators (KPIs) from their game servers running on Google Cloud Platform and monitor the KPIs with low latency. How should they capture the KPIs?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Store time-series data from the game servers in Google Bigtable, and view it using Google Data Studio.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Output custom metrics to Stackdriver from the game servers, and create a Dashboard in Stackdriver Monitoring Console to view them.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Schedule BigQuery load jobs to ingest analytics files uploaded to Cloud Storage every ten minutes, and visualize the results in Google Data Studio.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Insert the KPIs into Cloud Datastore entities, and run ad hoc analysis and visualizations of them in Cloud Datalab.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 70</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are using a single Cloud SQL instance to serve your application from a specific zone. You want to introduce high availability. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Create a read replica instance in a different region</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Create a failover replica instance in a different region</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Create a read replica instance in the same region, but in a different zone</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Create a failover replica instance in the same region, but in a different zone</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 74</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are tasked with building an online analytical processing (OLAP) marketing analytics and reporting tool. This requires a relational database that can operate on hundreds of terabytes of data. What is the Google-recommended tool for such applications?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Cloud Spanner, because it is globally distributed</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Cloud SQL, because it is a fully managed relational database</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Cloud Firestore, because it offers real-time synchronization across devices</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.BigQuery, because it is designed for large-scale processing of tabular data</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 78</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your applications will be writing their logs to BigQuery for analysis. Each application should have its own table. Any logs older than 45 days should be removed. You want to optimize storage and follow Google-recommended practices. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Configure the expiration time for your tables at 45 days</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Make the tables time-partitioned, and configure the partition expiration at 45 days</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Rely on BigQuery&#x27;s default behavior to prune application logs older than 45 days</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create a script that uses the BigQuery command line tool (bq) to remove records older than 45 days</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 86</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You have been engaged by your client to lead the migration of their application infrastructure to GCP. One of their current problems is that the on-premises high performance SAN is requiring frequent and expensive upgrades to keep up with the variety of workloads that are identified as follows: 20 TB of log archives retained for legal reasons; 500 GB of VM boot/data volumes and templates; 500 GB of image thumbnails; 200 GB of customer session state data that allows customers to restart sessions even if off-line for several days. Which of the following best reflects your recommendations for a cost-effective storage allocation?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Local SSD for customer session state data. Lifecycle-managed Cloud Storage for log archives, thumbnails, and VM boot/data volumes.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Memcache backed by Cloud Datastore for the customer session state data. Lifecycle-managed Cloud Storage for log archives, thumbnails, and VM boot/data volumes.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Memcache backed by Cloud SQL for customer session state data. Assorted local SSD-backed instances for VM boot/data volumes. Cloud Storage for log archives and thumbnails.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Memcache backed by Persistent Disk SSD storage for customer session state data. Assorted local SSD-backed instances for VM boot/data volumes. Cloud Storage for log archives and thumbnails.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 99</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are deploying a PHP App Engine Standard service with Cloud SQL as the backend. You want to minimize the number of queries to the database. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Set the memcache service level to dedicated. Create a key from the hash of the query, and return database values from memcache before issuing a query to Cloud SQL.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Set the memcache service level to dedicated. Create a cron task that runs every minute to populate the cache with keys containing query results.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Set the memcache service level to shared. Create a cron task that runs every minute to save all expected queries to a key called ג€cached_queriesג€.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Set the memcache service level to shared. Create a key called ג€cached_queriesג€, and return database values from the key before using a query to Cloud SQL.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 108</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are implementing a single Cloud SQL MySQL second-generation database that contains business-critical transaction data. You want to ensure that the minimum amount of data is lost in case of catastrophic failure. Which two features should you implement? (Choose two.)</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Sharding</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Read replicas</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Binary logging</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Automated backups</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">E.Semisynchronous replication</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 164</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are helping the QA team to roll out a new load-testing tool to test the scalability of your primary cloud services that run on Google Compute Engine with Cloud Bigtable. Which three requirements should they include? (Choose three.)</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Ensure that the load tests validate the performance of Cloud Bigtable</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Create a separate Google Cloud project to use for the load-testing environment</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Schedule the load-testing tool to regularly run against the production environment</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Ensure all third-party systems your services use is capable of handling high load</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">E.Instrument the production services to record every transaction for replay by the load-testing tool</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">F.Instrument the load-testing tool and the target services with detailed logging and metrics collection</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 178</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company has an application running on Google Cloud that is collecting data from thousands of physical devices that are globally distributed. Data is published to Pub/Sub and streamed in real time into an SSD Cloud Bigtable cluster via a Dataflow pipeline. The operations team informs you that your Cloud Bigtable cluster has a hotspot, and queries are taking longer than expected. You need to resolve the problem and prevent it from happening in the future. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Advise your clients to use HBase APIs instead of NodeJS APIs.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Delete records older than 30 days.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Review your RowKey strategy and ensure that keys are evenly spread across the alphabet.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Double the number of nodes you currently have.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 2 | Question 6</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/8497-exam-professional-cloud-architect-topic-2-question-6/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">JencoMart wants to move their User Profiles database to Google Cloud Platform. Which Google Database should they use?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Cloud Spanner</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Google BigQuery</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Google Cloud SQL</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Google Cloud Datastore</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 3 | Question 1</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/65937-exam-professional-cloud-architect-topic-3-question-1/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the Helicopter Racing League (HRL) case study. Your team is in charge of creating a payment card data vault for card numbers used to bill tens of thousands of viewers, merchandise consumers, and season ticket holders. You need to implement a custom card tokenization service that meets the following requirements: *    It must provide low latency at minimal cost. *    It must be able to identify duplicate credit cards and must not store plaintext card numbers. *    It should support annual key rotation. Which storage approach should you adopt for your tokenization service?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Store the card data in Secret Manager after running a query to identify duplicates.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Encrypt the card data with a deterministic algorithm stored in Firestore using Datastore mode.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Encrypt the card data with a deterministic algorithm and shard it across multiple Memorystore instances.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Use column-level encryption to store the data in Cloud SQL.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 3 | Question 5</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/56326-exam-professional-cloud-architect-topic-3-question-5/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the Helicopter Racing League (HRL) case study. HRL is looking for a cost-effective approach for storing their race data such as telemetry. They want to keep all historical records, train models using only the previous season&#x27;s data, and plan for data growth in terms of volume and information collected. You need to propose a data solution. Considering HRL business requirements and the goals expressed by CEO S. Hawke, what should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Use Firestore for its scalable and flexible document-based database. Use collections to aggregate race data by season and event.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Use Cloud Spanner for its scalability and ability to version schemas with zero downtime. Split race data using season as a primary key.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Use BigQuery for its scalability and ability to add columns to a schema. Partition race data based on season.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Use Cloud SQL for its ability to automatically manage storage increases and compatibility with MySQL. Use separate database instances for each season.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 6 | Question 5</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/7236-exam-professional-cloud-architect-topic-6-question-5/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the Mountkirk Games case study. You need to analyze and define the technical architecture for the database workloads for your company, Mountkirk Games. Considering the business and technical requirements, what should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Use Cloud SQL for time series data, and use Cloud Bigtable for historical data queries.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Use Cloud SQL to replace MySQL, and use Cloud Spanner for historical data queries.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Use Cloud Bigtable to replace MySQL, and use BigQuery for historical data queries.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Use Cloud Bigtable for time series data, use Cloud Spanner for transactional data, and use BigQuery for historical data queries.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 6 | Question 6</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/7237-exam-professional-cloud-architect-topic-6-question-6/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the Mountkirk Games case study. Which managed storage option meets Mountkirk&#x27;s technical requirement for storing game activity in a time series database service?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Cloud Bigtable</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Cloud Spanner</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.BigQuery</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Cloud Datastore</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 11 | Question 6</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/9198-exam-professional-cloud-architect-topic-11-question-6/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Dress4Win has asked you for advice on how to migrate their on-premises MySQL deployment to the cloud. They want to minimize downtime and performance impact to their on-premises solution during the migration. Which approach should you recommend?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Create a dump of the on-premises MySQL master server, and then shut it down, upload it to the cloud environment, and load into a new MySQL cluster.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Setup a MySQL replica server/slave in the cloud environment, and configure it for asynchronous replication from the MySQL master server on-premises until cutover.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Create a new MySQL cluster in the cloud, configure applications to begin writing to both on premises and cloud MySQL masters, and destroy the original cluster at cutover.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create a dump of the MySQL replica server into the cloud environment, load it into: Google Cloud Datastore, and configure applications to read/write to Cloud Datastore at cutover.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 11 | Question 8</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/8251-exam-professional-cloud-architect-topic-11-question-8/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">As part of their new application experience, Dress4Wm allows customers to upload images of themselves. The customer has exclusive control over who may view these images. Customers should be able to upload images with minimal latency and also be shown their images quickly on the main application page when they log in. Which configuration should Dress4Win use?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Store image files in a Google Cloud Storage bucket. Use Google Cloud Datastore to maintain metadata that maps each customer&#x27;s ID and their image files.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Store image files in a Google Cloud Storage bucket. Add custom metadata to the uploaded images in Cloud Storage that contains the customer&#x27;s unique ID.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Use a distributed file system to store customers&#x27; images. As storage needs increase, add more persistent disks and/or nodes. Assign each customer a unique ID, which sets each file&#x27;s owner attribute, ensuring privacy of images.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Use a distributed file system to store customers&#x27; images. As storage needs increase, add more persistent disks and/or nodes. Use a Google Cloud SQL database to maintain metadata that maps each customer&#x27;s ID to their image files.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 12 | Question 2</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/7265-exam-professional-cloud-architect-topic-12-question-2/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the Dress4Win case study. Considering the given business requirements, how would you automate the deployment of web and transactional data layers?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Deploy Nginx and Tomcat using Cloud Deployment Manager to Compute Engine. Deploy a Cloud SQL server to replace MySQL. Deploy Jenkins using Cloud Deployment Manager.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Deploy Nginx and Tomcat using Cloud Launcher. Deploy a MySQL server using Cloud Launcher. Deploy Jenkins to Compute Engine using Cloud Deployment Manager scripts.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Migrate Nginx and Tomcat to App Engine. Deploy a Cloud Datastore server to replace the MySQL server in a high-availability configuration. Deploy Jenkins to Compute Engine using Cloud Launcher.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Migrate Nginx and Tomcat to App Engine. Deploy a MySQL server using Cloud Launcher. Deploy Jenkins to Compute Engine using Cloud Launcher.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div></div>
+</div>
+<script>
+/* ── THEME ── */
+(function(){
+  var saved = localStorage.getItem('pca-theme') ||
+    (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+
+function toggleTheme(){
+  var next = document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('pca-theme', next);
+  var btn = document.getElementById('theme-label');
+  if(btn) btn.textContent = next==='dark' ? '☀️ Light mode' : '🌙 Dark mode';
+}
+
+/* ── FLASHCARDS ── */
+function flip(el){ el.classList.toggle('flipped'); }
+
+/* ── Q&A ── */
+var score = {correct:0, wrong:0};
+function updateStats(){
+  document.getElementById('s-correct').textContent = score.correct;
+  document.getElementById('s-wrong').textContent   = score.wrong;
+  document.getElementById('s-total').textContent   =
+    document.querySelectorAll('.qa-card').length;
+}
+
+function answer(btn, isCorrect){
+  var card = btn.closest('.qa-card');
+  if(card.dataset.answered) return;
+  card.dataset.answered = '1';
+  card.querySelectorAll('.choice').forEach(function(c){
+    if(c.dataset.correct==='1') c.classList.add('correct');
+    else if(c===btn) c.classList.add('wrong');
+  });
+  card.querySelector('.explanation').classList.add('visible');
+  if(isCorrect) score.correct++; else score.wrong++;
+  updateStats();
+}
+
+/* ── TABS ── */
+function switchTab(name){
+  document.querySelectorAll('.tab-btn').forEach(function(b){
+    b.classList.toggle('active', b.dataset.tab===name);
+  });
+  document.querySelectorAll('.tab-content').forEach(function(t){
+    t.classList.toggle('active', t.id==='tab-'+name);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  updateStats();
+  var btn = document.getElementById('theme-label');
+  if(btn){
+    var current = document.documentElement.getAttribute('data-theme');
+    btn.textContent = current==='dark' ? '☀️ Light mode' : '🌙 Dark mode';
+  }
+});
+</script>
+</body>
+</html>
