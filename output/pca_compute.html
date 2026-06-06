@@ -1,0 +1,1767 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PCA &ndash; Compute</title>
+<style>
+/* ── THEME TOKENS ── */
+:root {
+  --bg:#0f1117;--surface:#1a1d27;--card:#1e2130;--border:#2e3250;
+  --accent:#4f8ef7;--green:#3ecf7c;--red:#f75f5f;--yellow:#f7c948;
+  --text:#e4e8f0;--muted:#7b8099;--radius:14px;
+  --shadow:0 8px 28px #0006;
+}
+[data-theme="light"] {
+  --bg:#f0f2f8;--surface:#ffffff;--card:#ffffff;--border:#d0d5e8;
+  --accent:#2563eb;--green:#16a34a;--red:#dc2626;--yellow:#ca8a04;
+  --text:#1e2130;--muted:#64748b;
+  --shadow:0 4px 20px #0001;
+}
+
+/* ── RESET ── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;
+  min-height:100vh;padding:2rem 1rem;transition:background .25s,color .25s}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;
+  max-width:1200px;margin:0 auto 1.5rem}
+h1{font-size:1.7rem;font-weight:700}
+.subtitle{text-align:center;color:var(--muted);font-size:.9rem;margin-bottom:2rem}
+
+/* ── THEME TOGGLE ── */
+.theme-toggle{display:flex;align-items:center;gap:.5rem;cursor:pointer;
+  background:var(--surface);border:1px solid var(--border);border-radius:99px;
+  padding:.35rem .9rem;font-size:.8rem;color:var(--muted);
+  transition:all .2s;user-select:none}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.toggle-track{width:36px;height:20px;border-radius:99px;background:var(--border);
+  position:relative;transition:background .25s}
+.toggle-thumb{width:14px;height:14px;border-radius:50%;background:#fff;
+  position:absolute;top:3px;left:3px;transition:transform .25s,background .25s;
+  box-shadow:0 1px 3px #0003}
+[data-theme="light"] .toggle-track{background:var(--accent)}
+[data-theme="light"] .toggle-thumb{transform:translateX(16px)}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:.5rem;justify-content:center;margin-bottom:2rem;flex-wrap:wrap}
+.tab-btn{padding:.5rem 1.4rem;border-radius:99px;border:2px solid var(--border);
+  background:transparent;color:var(--muted);cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.tab-content{display:none}.tab-content.active{display:block}
+
+/* ── FLASHCARDS ── */
+.deck-header{text-align:center;color:var(--muted);margin-bottom:1.5rem;font-size:.85rem}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.2rem}
+.flashcard{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.flashcard:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.card-header{display:flex;align-items:center;justify-content:space-between;
+  padding:.75rem 1rem;border-bottom:1px solid var(--border);background:var(--surface)}
+.card-title{font-weight:700;font-size:.95rem}
+.badge{font-size:.7rem;padding:.2rem .6rem;border-radius:99px;
+  background:var(--border);color:var(--accent)}
+.card-body{padding:1.1rem}
+.card-front p{font-size:.85rem;color:var(--muted);margin-bottom:.5rem}
+.card-front h3{font-size:1rem;font-weight:600;line-height:1.4}
+.card-back{display:none}
+.flashcard.flipped .card-front{display:none}
+.flashcard.flipped .card-back{display:block}
+.field{margin-bottom:.75rem}
+.field-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--accent);margin-bottom:.25rem}
+.field-value{font-size:.82rem;color:var(--text);line-height:1.5}
+.flip-hint{font-size:.7rem;color:var(--muted);text-align:right;margin-top:.6rem}
+.scenario-box{background:var(--surface);border-left:3px solid var(--yellow);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;margin-top:.5rem;font-size:.82rem}
+.answer-box{background:var(--surface);border-left:3px solid var(--green);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;margin-top:.4rem;font-size:.82rem}
+
+/* ── Q&A ── */
+.qa-grid{display:grid;gap:1.2rem}
+.qa-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.qa-header{display:flex;align-items:center;justify-content:space-between;
+  padding:.7rem 1rem;background:var(--surface);border-bottom:1px solid var(--border)}
+.qa-label{font-size:.8rem;font-weight:700;color:var(--accent)}
+.qa-url{font-size:.7rem;color:var(--muted);text-decoration:none}
+.qa-url:hover{color:var(--accent)}
+.qa-body{padding:1rem}
+.qa-question{font-size:.9rem;line-height:1.5;margin-bottom:.8rem;font-weight:500}
+.choices{list-style:none;display:grid;gap:.4rem}
+.choice{padding:.5rem .8rem;border-radius:8px;border:1px solid var(--border);
+  font-size:.82rem;cursor:pointer;transition:all .2s;user-select:none}
+.choice:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.choice.correct{background:color-mix(in srgb,var(--green) 12%,transparent);
+  border-color:var(--green);color:var(--green)}
+.choice.wrong{background:color-mix(in srgb,var(--red) 12%,transparent);
+  border-color:var(--red);color:var(--red)}
+.explanation{display:none;margin-top:.8rem;font-size:.82rem;line-height:1.5;
+  background:var(--surface);border-left:3px solid var(--accent);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;color:var(--muted)}
+.explanation.visible{display:block}
+
+/* ── STATS ── */
+.stats-bar{display:flex;gap:1rem;justify-content:center;margin-bottom:1.5rem;flex-wrap:wrap}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:.5rem 1.1rem;text-align:center;min-width:90px}
+.stat-num{font-size:1.4rem;font-weight:700}
+.stat-label{font-size:.7rem;color:var(--muted)}
+.stat.green .stat-num{color:var(--green)}
+.stat.red .stat-num{color:var(--red)}
+.stat.yellow .stat-num{color:var(--yellow)}
+</style>
+<script>
+(function(){
+  var t=localStorage.getItem('pca-theme')||
+    (window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');
+  document.documentElement.setAttribute('data-theme',t);
+})();
+</script>
+</head>
+<body>
+<div class="topbar">
+  <h1>PCA &mdash; Compute</h1>
+  <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+    <span id="theme-label">&#9728;&#65039; Light mode</span>
+  </button>
+</div>
+<p class="subtitle">High-signal patterns for the PCA exam.</p>
+<div class="tabs"><button class="tab-btn active" data-tab="flashcards" onclick="switchTab('flashcards')">&#128218; Flashcards</button><button class="tab-btn" data-tab="exam-qa" onclick="switchTab('exam-qa')">&#129514; Exam Q&amp;A</button></div>
+
+<div id="tab-flashcards" class="tab-content active">
+  <p class="deck-header">Showing 23 cards &mdash; click to flip</p>
+  <div class="cards-grid">
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cloud VPN</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Managed IPsec VPN tunnels connecting GCP VPCs to on-premises networks or other clouds over the public internet.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Secure hybrid connectivity where Dedicated Interconnect bandwidth is not required; low-cost DR backup link; encrypted tunnels over internet.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">High-throughput workloads (&gt;3 Gbps per tunnel); latency-sensitive links where Dedicated Interconnect is more appropriate.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Easier to set up and more affordable than Interconnect, but throughput and latency depend on the public internet.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use HA Cloud VPN (two tunnels per gateway) for 99.99% SLA. Prefer IKEv2. Rotate pre-shared keys regularly.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company needs private connectivity to GCP. They cannot afford Dedicated Interconnect and average throughput is 200 kbps.</div><div class="answer-box">HA Cloud VPN with two tunnels to on-premises gateway — meets 99.99% availability at low cost.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Dedicated Interconnect</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Physical layer-2 connection between your on-premises network and Google&#x27;s network, bypassing the public internet entirely.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">High-throughput (10–100 Gbps), low-latency workloads; large-scale DB replication; production hybrid architectures requiring private IPs.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Locations without Google colocation facilities; low-bandwidth or cost-sensitive dev/test workloads.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Highest performance and lowest latency, but requires colocation agreement, higher cost, and longer provisioning lead time.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Deploy two connections in different metro areas for 99.99% availability. Traffic never traverses the public internet, reducing exfiltration risk.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A 4 TB database replicates to GCP with large frequent updates and requires private address space communication.</div><div class="answer-box">Google Cloud Dedicated Interconnect — high bandwidth, low latency, private connectivity.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Partner Interconnect</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Connectivity to GCP through a supported service provider&#x27;s network when a direct physical connection to a Google colocation facility is not possible.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Locations not near a Google colocation facility; lower bandwidth needs than Dedicated Interconnect (50 Mbps to 10 Gbps).</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">When 10–100 Gbps throughput is required and a Google colocation facility is accessible — use Dedicated Interconnect instead.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">More accessible than Dedicated Interconnect but adds a third-party provider dependency and slightly higher latency.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Still private — traffic goes through the partner network, not the public internet. Validate provider SLAs match your availability targets.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company needs private hybrid connectivity but is not located near a Google POP and needs 1 Gbps.</div><div class="answer-box">Partner Interconnect via a supported service provider.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Global External HTTP(S) Load Balancer</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Google&#x27;s globally distributed HTTP/HTTPS load balancer with URL-map path routing, SSL offload, and anycast frontend IP.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Global web apps needing path-based routing, multi-region deployments, SSL termination at the edge, and Cloud CDN integration.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">TCP/UDP apps (use TCP/SSL Proxy LB or Network LB); purely internal traffic (use Internal HTTP(S) LB).</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Massive global scale and sophisticated routing vs. complexity in URL map configuration.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Attach Cloud Armor WAF policies to the backend service. Enable Cloud CDN to reduce backend load and egress cost.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">You need global path-based routing with end-to-end encryption following Google best practices.</div><div class="answer-box">Global External HTTPS Load Balancer with URL Maps and managed SSL certificates.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Internal HTTP(S) Load Balancer</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Managed HTTP/HTTPS load balancer that distributes traffic to backends within a VPC using private internal IP addresses only.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Microservices communication within a VPC or Shared VPC; internal APIs that must never be reachable from the internet.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Public-facing traffic; cross-region internal traffic (use global internal HTTP(S) LB for that).</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Keeps traffic entirely internal (no public exposure), but only accessible within the VPC or connected on-premises networks.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">No public IP means no direct internet attack surface. Use IAM and firewall rules to further restrict which services can reach the LB.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">Backend microservices in a VPC must be load-balanced internally without any public internet exposure.</div><div class="answer-box">Internal HTTP(S) Load Balancer using private IP within the VPC.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">VPC Firewall Rules</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Stateful ingress/egress rules applied to VPC instances, evaluated by priority number (lower number = higher priority, evaluated first).</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Controlling traffic between tiers in a VPC; restricting external access; enforcing egress policies without public IPs.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Cross-project perimeter control (use VPC Service Controls); layer-7 traffic inspection (use a third-party NGFW or Cloud IDS).</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Simple and flexible tag-based targeting works well with autoscaling, but rules are not layer-7 aware.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use network tags over CIDR ranges for autoscaling compatibility. Default-deny everything; allow only required explicit flows.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A 3-tier VPC must allow web→API and API→DB traffic but block web→DB. Instances autoscale so no static IPs.</div><div class="answer-box">Add network tags to each tier and create ingress firewall rules scoped to those tags.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cloud NAT</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Managed network address translation service that allows instances with only private IPs to initiate outbound connections to the internet.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Private GKE clusters or VMs that need to download packages or reach external APIs without having public IPs assigned.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Inbound internet connections (NAT is outbound only); use public IPs or load balancers when inbound reach is also required.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Security benefit of no public IPs on instances vs. no direct inbound internet connectivity.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Scope NAT to specific subnets — do not apply it org-wide unnecessarily. Monitor port allocation metrics to avoid SNAT port exhaustion under high connection loads.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A subnet&#x27;s VMs have only private IPs and need to download OS packages from the internet.</div><div class="answer-box">Configure Cloud NAT on the VPC, scoped to that subnet.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Shared VPC</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture where one host project owns and manages the VPC, and multiple service projects share it for compute workloads.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Large organizations needing to separate network administration from compute workload ownership across teams.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Single-project setups or small teams where separation adds unnecessary overhead.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Clean separation of duties (network vs. workload teams) vs. added governance and dependency on the host project.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Assign Network Admin to the networking team in the host project. Dev teams get Compute Admin only in service projects — they never see host network resources.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A networking team must manage all VPC resources. A dev team needs Compute Admin but must not access network config or sensitive VM data.</div><div class="answer-box">Shared VPC — host project owned by the networking team; dev team works in a service project with Compute Admin only.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">VPC Network Peering</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Private, low-latency connectivity between two VPC networks across projects or organizations using Google&#x27;s internal network — no overlapping CIDRs allowed.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Internal connectivity between separate VPCs in the same or different organizations where IP ranges do not overlap and transitive routing is not needed.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Overlapping CIDR ranges (use Cloud VPN + NAT instead); when transitive routing is needed (peering is non-transitive).</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Simplest private multi-VPC connectivity with low latency and no VPN overhead, but strictly non-transitive.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">No extra charge for peering itself. IAM policies still apply per project. Use firewall tags to enforce least-privilege between peered networks.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">Two VPCs in separate organizations with non-overlapping subnets need high-throughput, low-latency private communication.</div><div class="answer-box">VPC Network Peering — provides internal Google routing without public internet traversal.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">VPC Service Controls</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Security perimeters around GCP API services (Cloud Storage, BigQuery, etc.) that restrict access regardless of IAM permissions, preventing data exfiltration.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Protecting sensitive data from exfiltration by insiders or compromised code; enforcing that GCP APIs are only accessible from specific networks or identities.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Simple IAM-only use cases without sensitive data; services not yet covered by VPC Service Controls support list.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Strong perimeter-based exfiltration protection, but requires careful access level design to avoid accidentally blocking legitimate workflows.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Combine with access levels scoped to corporate CIDR ranges. Audit Denied access logs to catch misconfigurations early.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">Data analysts have IAM access to Cloud Storage buckets but must not be able to download data from outside the office network.</div><div class="answer-box">VPC Service Controls perimeter with an access level limited to the office network CIDR.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Private Google Access</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Subnet-level configuration that lets VM instances with only internal IPs reach Google APIs and services (Cloud Storage, BigQuery, etc.) without a public IP.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">VMs with no external IP that need to call Google APIs; required when using Cloud NAT is not sufficient for API access.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Access to non-Google external services — use Cloud NAT for that; not a substitute for VPC Service Controls perimeter enforcement.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Enables Google API access from private VMs at no extra cost, but only covers Google APIs — not arbitrary internet destinations.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Enable per subnet. Combine with VPC Service Controls for full exfiltration protection. Does not expose VMs to inbound internet traffic.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A VM with no public IP must upload files to Cloud Storage in a secured environment with no internet access.</div><div class="answer-box">Enable Private Google Access on the subnet — the VM can reach Cloud Storage via internal routes.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Serverless VPC Access</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Connector that allows serverless runtimes (Cloud Run, App Engine Standard, Cloud Functions) to reach resources inside a VPC using internal IPs.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">App Engine Standard or Cloud Run services that need to connect to on-premises databases via Cloud VPN, or to VPC-internal services.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Workloads already running inside a VPC (GCE, GKE) — they are already on the VPC; no connector needed.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Bridges serverless isolation to VPC connectivity, but adds a connector resource with its own scaling and cost.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Size the connector throughput to match traffic. The connector itself has an IP in your VPC — apply firewall rules to limit what it can reach.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">An App Engine Standard app must connect to an on-premises database via an existing Cloud VPN tunnel.</div><div class="answer-box">Configure Serverless VPC Access connector — App Engine Standard uses it to route traffic through the VPC and on to on-premises.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cloud CDN</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Google&#x27;s globally distributed content delivery network, integrated with the External HTTP(S) Load Balancer to cache content at edge POPs worldwide.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Static assets, media streaming, public APIs with cacheable responses, and global user bases needing low latency reads.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Dynamic fully personalized content that must not be cached; internal-only traffic with no global reach requirement.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Significant latency reduction and origin offload vs. cache invalidation complexity for frequently updated content.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use signed URLs or signed cookies to protect private content behind CDN. Carefully set Cache-Control headers to avoid caching sensitive responses.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A global media platform wants to reduce latency for users worldwide and lower origin server load.</div><div class="answer-box">Enable Cloud CDN on the backend service of the Global HTTPS Load Balancer.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Identity-Aware Proxy (IAP) TCP Tunneling</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Google service that enforces identity and context-based access to internal VMs via SSH/RDP tunnels without requiring public IPs or a bastion host.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">SSH access to private VMs from corporate users without a VPN or bastion; identity-controlled admin access enforced at the Google level.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">High-throughput application traffic (IAP is for admin tunneling, not data paths); automated on-premises-initiated connections.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">More secure and auditable than bastion hosts, but requires IAP-secured Tunnel User IAM role and the gcloud CLI on the client side.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Grant only the roles/iap.tunnelResourceAccessor role to specific identities. Combine with OS Login for full identity-controlled SSH without managing SSH keys.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">Instances have no public IPs. An engineer must SSH in without violating the no-public-IP security requirement.</div><div class="answer-box">Configure IAP TCP tunneling and use gcloud compute ssh with the --tunnel-through-iap flag.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cloud DNS</span>
+    <span class="badge">Networking</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Scalable, reliable managed DNS service running on Google&#x27;s infrastructure, supporting public and private zones.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Hosting public DNS zones for domains; private zones for internal GCP service discovery; DNS peering between VPCs; hybrid on-premises DNS resolution.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Application-level service discovery within Kubernetes (use kube-dns / Cloud DNS for GKE); sub-millisecond DNS caching within a single VM.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Fully managed with 100% SLA and global anycast, but DNS propagation still has TTL-based delays for changes.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use private zones to keep internal service names off the public internet. DNSSEC can be enabled on public zones to prevent spoofing.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">Internal GCP services must resolve each other by name without exposing those names publicly.</div><div class="answer-box">Create a Cloud DNS private zone scoped to the VPC.
+
+To prepare for the Professional Cloud Architect (PSA) exam, you need to master not just Networking, but also Compute, Storage, Databases, and Security/Governance.
+
+Below are the essential &quot;Service Cards&quot; for the remaining core domains, following your exact structure and logic.
+
+======================================================================
+PSA Service Cards — COMPUTE &amp; CONTAINERS
+======================================================================
+SERVICE: Compute Engine (GCE)
+CATEGORY: Compute
+WHAT_IT_IS: Infrastructure-as-a-Service (IaaS) providing customizable Virtual Machines (VMs) on Google’s infrastructure.
+BEST_FIT: Legacy applications requiring specific OS kernels; lift-and-shift workloads; high-performance computing (HPC); apps requiring custom local SSD or GPU configurations.
+NOT_A_GOOD_FIT: Microservices that can be containerized (use GKE); short-lived functions (use Cloud Functions); when you want zero infrastructure management.
+KEY_TRADEOFF: Maximum control over the OS and hardware vs. highest operational overhead for patching and scaling.
+COST_SECURITY: Use Committed Use Discounts (CUDs) for predictable workloads. Use Shielded VMs to prevent rootkits and ensure boot integrity.
+EXAM_SCENARIO: A company needs to move a monolithic Windows Server application to the cloud with minimal code changes.
+ANSWER: Compute Engine with custom machine types and Shielded VM settings.
+
+SERVICE: Google Kubernetes Engine (GKE)
+CATEGORY: Compute
+WHAT_IT_IS: Managed Kubernetes service for orchestrating Docker containers, supporting both &quot;Standard&quot; and &quot;Autopilot&quot; modes.
+BEST_FIT: Containerized microservices; hybrid-cloud deployments using Anthos; applications needing complex orchestration, auto-healing, and horizontal scaling.
+NOT_A_GOOD_FIT: Simple monolithic apps; very small apps where the overhead of Kubernetes is overkill (use Cloud Run).
+KEY_TRADEOFF: Industry-standard flexibility and portability vs. a steep learning curve for cluster management.
+COST_SECURITY: Use Autopilot for a fully managed experience where Google manages nodes. Use GKE Sandbox or Binary Authorization for container security.
+EXAM_SCENARIO: An organization wants to deploy a suite of microservices that can scale independently and need to be portable across different cloud providers.
+ANSWER: Google Kubernetes Engine (GKE) using the Standard tier for fine-grained control or Autopilot for hands-off management.
+
+SERVICE: Cloud Run
+CATEGORY: Compute
+WHAT_IT_IS: Fully managed serverless platform for running containerized applications that automatically scales from zero to N.
+BEST_FIT: Websites; private APIs; data processing tasks; any containerized app that listens for HTTP requests or events and needs &quot;scale-to-zero&quot; cost savings.
+NOT_A_GOOD_FIT: Applications requiring local persistent disks; workloads that must run for longer than 60 minutes; non-containerized legacy code.
+KEY_TRADEOFF: Zero infrastructure management and pay-as-you-go vs. cold-start latency and limited hardware customization.
+COST_SECURITY: Pay only when the CPU is processing requests. Integrate with Secret Manager to inject environment variables securely.
+EXAM_SCENARIO: A developer needs to deploy a containerized API that has highly erratic traffic, including long periods of no usage.
+ANSWER: Cloud Run — scales to zero when not in use, eliminating idle costs.
+
+======================================================================
+PSA Service Cards — STORAGE &amp; DATABASES
+======================================================================
+SERVICE: Cloud Storage (GCS)
+CATEGORY: Storage
+WHAT_IT_IS: Scalable, durable object storage for unstructured data, categorized by access frequency (Standard, Nearline, Coldline, Archive).
+BEST_FIT: Serving website assets; data lakes; backups and disaster recovery; storing large media files.
+NOT_A_GOOD_FIT: Block storage for OS drives (use Persistent Disk); frequently changing data within a file (objects are immutable).
+KEY_TRADEOFF: Virtually infinite scale and high durability vs. higher latency compared to local disk and lack of a traditional file system.
+COST_SECURITY: Use Object Lifecycle Management to move old data to cheaper tiers. Use Uniform Bucket-Level Access for consistent security.
+EXAM_SCENARIO: You need to store petabytes of data for compliance that will likely never be accessed but must be kept for 10 years.
+ANSWER: Cloud Storage Archive Class with Lifecycle Management rules.
+
+SERVICE: Cloud Spanner
+CATEGORY: Databases
+WHAT_IT_IS: Fully managed, mission-critical, relational database that provides strong consistency and global scale.
+BEST_FIT: Large-scale financial systems; global inventory management; workloads requiring the ACID properties of SQL but the scale of NoSQL.
+NOT_A_GOOD_FIT: Small applications (&lt; 2TB); when low cost is the primary driver; simple key-value needs.
+KEY_TRADEOFF: Infinite horizontal scaling and 99.999% availability vs. high cost and specialized SQL dialect.
+COST_SECURITY: Expensive minimum entry point. Data is encrypted at rest by default. Use CMEK for regulatory requirements.
+EXAM_SCENARIO: A global retail chain needs a transactional database that ensures consistent stock levels across the US, Europe, and Asia simultaneously.
+ANSWER: Cloud Spanner — provides global consistency and high availability.
+
+SERVICE: Cloud Bigtable
+CATEGORY: Databases
+WHAT_IT_IS: High-performance, fully managed NoSQL wide-column database service for large analytical and operational workloads.
+BEST_FIT: IoT data; telemetry; financial &quot;time-series&quot; data; ad-tech; workloads requiring sub-10ms latency at massive scale.
+NOT_A_GOOD_FIT: Small datasets (&lt; 1TB); highly relational data with complex joins; general-purpose web backends.
+KEY_TRADEOFF: Extreme throughput and low latency vs. no support for SQL joins or multi-row transactions.
+COST_SECURITY: Minimum 3-node cluster for production. Use IAM roles to restrict access at the project or instance level.
+EXAM_SCENARIO: You are capturing 100,000 events per second from millions of IoT sensors and need to perform real-time analysis.
+ANSWER: Cloud Bigtable — optimized for high-throughput write and time-series data.
+
+SERVICE: BigQuery
+CATEGORY: Databases / Analytics
+WHAT_IT_IS: Serverless, highly scalable data warehouse with a built-in query engine using standard SQL.
+BEST_FIT: Large-scale data analysis (OLAP); Business Intelligence (BI) reporting; machine learning on large datasets (BigQuery ML).
+NOT_A_GOOD_FIT: Transactional workloads (OLTP); frequent single-row updates/deletes; sub-millisecond response times.
+KEY_TRADEOFF: Blazing fast queries on petabytes vs. columnar storage which is inefficient for small, frequent transactional writes.
+COST_SECURITY: Separate storage and compute costs. Use Authorized Views to share data without granting access to underlying tables.
+EXAM_SCENARIO: A marketing team needs to run complex SQL queries against 500 TB of historical sales data to find patterns.
+ANSWER: BigQuery — serverless data warehousing with petabyte-scale performance.
+
+======================================================================
+PSA Service Cards — OPERATIONS &amp; SECURITY
+======================================================================
+SERVICE: Cloud Logging &amp; Monitoring (Operations Suite)
+CATEGORY: Operations
+WHAT_IT_IS: Integrated toolset for gathering logs, metrics, and traces from GCP resources and applications.
+BEST_FIT: Debugging production issues; setting up performance alerts; centralized log management for compliance.
+NOT_A_GOOD_FIT: Long-term archival of logs (export to GCS instead); high-granularity application tracing without instrumenting code.
+KEY_TRADEOFF: deep integration with GCP vs. potential cost spikes if logging verbosity is not managed.
+COST_SECURITY: Use Log Sinks to export logs to BigQuery for analysis or GCS for long-term storage. Set up Alerting Policies based on SLOs/SLIs.
+EXAM_SCENARIO: You need to be notified immediately if the 404-error rate of your web application exceeds 5% over a 5-minute window.
+ANSWER: Cloud Monitoring with an Alerting Policy based on a Log-based Metric.
+
+SERVICE: Secret Manager
+CATEGORY: Security
+WHAT_IT_IS: Secure and convenient storage system for API keys, passwords, certificates, and other sensitive data.
+BEST_FIT: Replacing hardcoded credentials in code; managing rotation of database passwords; versioning secrets.
+NOT_A_GOOD_FIT: Storing large files (use GCS); non-sensitive configuration (use Runtime Configurator or environment variables).
+KEY_TRADEOFF: Enhanced security and auditability vs. the need to call an API to retrieve values at runtime.
+COST_SECURITY: Supports automatic rotation using Cloud Functions. Principles of Least Privilege: grant &quot;Secret Accessor&quot; only to the service account.
+EXAM_SCENARIO: An application needs to access a database password, but the security team forbids storing it in the source code or environment variables.
+ANSWER: Store the password in Secret Manager and grant the VM&#x27;s service account the Secret Accessor role.
+
+give it as txt format and all what needed for compute services and ressources to know and basics
+
+Your TXT file containing the Professional Cloud Architect (PSA) Compute Study Guide is ready.
+TXT icon
+ PSA_Comput...tudy_Guide
+TXT
+
+This document follows your requested structure and includes:
+
+Core Compute Concepts: Machine family breakdown (General, Compute, Memory, Accelerator), VM pricing (Spot vs. Committed Use), and Managed Instance Group (MIG) features.
+
+Complete Service Cards: Detailed blocks for Compute Engine, GKE, Cloud Run, Cloud Functions, App Engine (Standard &amp; Flex), VMware Engine, Bare Metal, and Batch.
+
+Exam Logic: Each card includes the &quot;Best Fit,&quot; &quot;Not a Good Fit,&quot; and a specific &quot;Exam Scenario&quot; with the expected answer to help you prepare for the logic used in the Professional Cloud Architect exam.
+
+
+
+
+
+Gemini is AI and can make mistakes, including about people. Your privacy &amp; GeminiOpens in a new window
+
+# ======================================================================
+# PSA COMPUTE BASICS &amp; CONCEPTS
+# ======================================================================
+
+CONCEPT: Machine Families
+DETAILS:
+ - General Purpose (E2, N2, N1, Tau T2D): Balanced price/performance. Good for web servers, small DBs.
+ - Compute-Optimized (C2, C2D): High CPU-to-Memory ratio. Best for HPC, gaming, media encoding.
+ - Memory-Optimized (M1, M2, M3): High Memory-to-CPU ratio. Best for SAP HANA, large in-memory DBs.
+ - Accelerator-Optimized (A2, A3): Dedicated NVIDIA GPUs. Best for ML/AI and CUDA workloads.
+
+CONCEPT: VM Lifecycle &amp; Pricing
+DETAILS:
+ - Standard VMs: Billed by the second. 1-yr or 3-yr Committed Use Discounts (CUDs) for 37-57% savings.
+ - Spot VMs: Excess capacity, can be preempted by Google. Up to 91% savings. Best for fault-tolerant batch.
+ - Sustained Use Discounts (SUDs): Automatic discounts (N1/N2 only) for running VMs for a significant portion of the month.
+
+CONCEPT: Managed Instance Groups (MIGs)
+DETAILS:
+ - Auto-scaling: Adds/removes VMs based on CPU, Load Balancer traffic, or Pub/Sub metrics.
+ - Auto-healing: Uses health checks to recreate VMs that are failing.
+ - Rolling Updates: Updates instances to a new template without downtime (Max Surge/Max Unavailable).
+ - Regional vs Zonal: Regional MIGs spread VMs across 3 zones for high availability.
+
+# ======================================================================
+# PSA Service Cards — COMPUTE &amp; INFRASTRUCTURE
+# ======================================================================
+
+SERVICE: Compute Engine (GCE)
+CATEGORY: Compute
+WHAT_IT_IS: Infrastructure-as-a-Service (IaaS) offering customizable Virtual Machines (VMs).
+BEST_FIT: Lift-and-shift of monolithic apps; high-performance computing (HPC); apps needing specific OS kernels or local SSDs; GPU-heavy workloads.
+NOT_A_GOOD_FIT: Microservices that can be containerized (use GKE/Cloud Run); when zero-ops is required; very short-lived event-driven code.
+KEY_TRADEOFF: Full control over hardware/OS vs. high operational burden for patching, scaling, and maintenance.
+COST_SECURITY: Use Spot VMs for fault-tolerant batch jobs to save 60-91%. Use Shielded VMs and OS Login for enhanced security.
+EXAM_SCENARIO: A company needs to run a specialized SQL Server on Windows with 256GB RAM and dedicated local NVMe storage.
+ANSWER: Compute Engine with Memory-Optimized machine types and Local SSDs.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Google Kubernetes Engine (GKE)</span>
+    <span class="badge">Compute</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Managed environment for deploying, managing, and scaling containerized applications using Kubernetes.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Microservices architectures; containerized apps needing complex orchestration; hybrid/multi-cloud via Anthos; stateful containerized apps.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Simple web apps with low traffic (use Cloud Run); non-containerized legacy apps; small teams with no K8s expertise.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Industry-standard portability and massive scalability vs. significant complexity and management overhead.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use GKE Autopilot to eliminate node management. Enable Binary Authorization to ensure only trusted images are deployed.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A high-growth startup needs to deploy 50+ microservices that auto-scale based on CPU load and must be portable to other clouds.</div><div class="answer-box">Google Kubernetes Engine (GKE) for container orchestration and portability.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cloud Run</span>
+    <span class="badge">Compute</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Fully managed serverless platform for running containerized applications that scale from zero to N based on HTTP traffic.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Web frontends; REST APIs; lightweight microservices; data processing tasks triggered by Webhooks or Pub/Sub.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Long-running background processes (&gt;60 mins); apps requiring low-level OS access; workloads requiring persistent local disk.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Zero infrastructure management and &quot;pay-as-you-go&quot; vs. cold-start latency and restricted execution environment.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Scales to zero when not in use (no cost for idle). Use Secret Manager for environment variables instead of plain text.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">You need to host a containerized Python API that is only used during business hours and must cost nothing overnight.</div><div class="answer-box">Cloud Run — it provides serverless scaling and scales to zero instances during idle time.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cloud Functions (2nd Gen)</span>
+    <span class="badge">Compute</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Event-driven serverless functions (FaaS) that execute code in response to events from GCP services or HTTP.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Small snippets of code; image thumbnail generation; file processing on GCS upload; real-time log analysis; Webhooks.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Complex applications with many dependencies; long-running tasks; high-traffic apps where Cloud Run is more cost-effective.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Simplest deployment model (code-only) vs. limited execution time and limited language runtimes.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Pay per 100ms of execution. Use IAM to restrict which services (like Pub/Sub or GCS) can trigger the function.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">Every time a CSV is uploaded to a Cloud Storage bucket, a small script must run to validate the data and insert it into BigQuery.</div><div class="answer-box">Cloud Functions triggered by a Cloud Storage &#x27;finalize&#x27; event.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">App Engine Standard</span>
+    <span class="badge">Compute</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Fully managed Platform-as-a-Service (PaaS) for building and deploying applications in specific language runtimes.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Web apps with rapid scaling needs; apps that need to scale to zero; developers who want to focus purely on code, not containers.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Apps requiring custom OS libraries (use App Engine Flex); apps written in unsupported languages; long-lived TCP connections.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Fastest &quot;code-to-cloud&quot; experience with automatic scaling vs. &quot;sandbox&quot; restrictions (no writing to local disk, limited CPU/RAM).</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Scale to zero helps save money. Built-in versioning allows for easy A/B testing and traffic splitting.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A developer team wants to deploy a Java web app without managing any servers or even Dockerfiles, and it must scale instantly.</div><div class="answer-box">App Engine Standard — provides a managed runtime that scales quickly without container management.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">App Engine Flexible</span>
+    <span class="badge">Compute</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>PaaS that runs your app in Docker containers on GCE VMs, offering more flexibility than Standard but with slower scaling.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Apps needing custom OS libraries; apps that must access resources in a VPC; workloads with steady traffic that don&#x27;t need to scale to zero.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Apps that need to scale to zero (it stays at minimum 1 instance); highly bursty traffic; cost-sensitive low-traffic apps.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">More flexible than Standard (Docker support) vs. higher cost and slower startup times (minutes instead of seconds).</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Runs on health-checked VM instances. Use Managed SSL certificates provided by the platform.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">You have a Python app that requires a specialized C++ library installed on the OS and needs to stay alive 24/7.</div><div class="answer-box">App Engine Flexible — allows custom Docker runtimes and handles infrastructure management.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Google Cloud VMware Engine (GCVE)</span>
+    <span class="badge">Compute</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>A fully managed VMware-as-a-service that allows you to run VMware workloads natively on GCP bare metal.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Enterprise &quot;evacuation&quot; of data centers; lifting and shifting VMware VMs without re-platforming or re-architecting.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">New cloud-native apps; workloads that can easily be containerized; small dev environments (very expensive).</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Continuity of operations and zero refactoring vs. very high cost and lack of &quot;cloud-native&quot; features (like auto-scaling).</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use existing VMware tools (vCenter, NSX) to manage the environment. Dedicated, isolated private cloud for security.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A bank wants to close its data center in 3 months and move 500 VMware VMs to GCP without changing any IP addresses or configurations.</div><div class="answer-box">Google Cloud VMware Engine (GCVE) — provides the fastest path to migration with zero refactoring.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Bare Metal Solution</span>
+    <span class="badge">Compute</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Specialized hardware (servers) in Google&#x27;s colocation facilities, connected to GCP via low-latency Interconnect.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Large Oracle databases; applications with licensing that forbids virtualization; hardware-locked legacy software.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Standard web apps; anything that can run on a VM; apps requiring high elasticity or scaling.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Performance of physical hardware and license compliance vs. manual management and lack of typical cloud flexibility.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Long-term commitments usually required. Physically isolated hardware in the Google ecosystem.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">An organization needs to migrate an Oracle DB that requires per-core physical licensing and cannot run on a hypervisor.</div><div class="answer-box">Google Cloud Bare Metal Solution.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Batch</span>
+    <span class="badge">Compute</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Managed service to schedule, queue, and execute batch computing jobs across GCE instances.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Genomic sequencing; visual effects rendering; financial modeling; weather simulations; large-scale ETL jobs.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Real-time APIs; long-running persistent services; interactive workloads.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Automates the orchestration of thousands of vCPUs vs. latency involved in provisioning and queuing.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Heavily integrated with Spot VMs for cost optimization. Automatically cleans up resources after the job completes.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A research firm needs to run 10,000 independent simulations overnight at the lowest possible cost.</div><div class="answer-box">Google Cloud Batch using Spot VMs.
+PSA_Compute_Study_Guide.txt
+Displaying PSA_Compute_Study_Guide.txt.</div></div>
+    </div>
+  </div>
+</div></div>
+</div>
+
+<div id="tab-exam-qa" class="tab-content">
+  <div class="stats-bar">
+    <div class="stat green"><div class="stat-num" id="s-correct">0</div><div class="stat-label">Correct</div></div>
+    <div class="stat red"><div class="stat-num" id="s-wrong">0</div><div class="stat-label">Wrong</div></div>
+    <div class="stat yellow"><div class="stat-num" id="s-total">0</div><div class="stat-label">Total</div></div>
+  </div>
+  <div class="qa-grid">
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 7</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">To reduce costs, the Director of Engineering has required all developers to move their development infrastructure resources from on-premises virtual machines (VMs) to Google Cloud Platform. These resources go through multiple start/stop events during the day and require state to persist. You have been asked to design the process of running a development environment in Google Cloud while providing cost visibility to the finance department. Which two steps should you take? (Choose two.)</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A. Use the --no-auto-delete flag on all persistent disks and stop the VM</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Use the --auto-delete flag on all persistent disks and terminate the VM</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Apply VM CPU utilization label and include it in the BigQuery billing export</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D. Use Google BigQuery billing export and labels to associate cost to groups</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">E. Store all state into local SSD, snapshot the persistent disks, and terminate the VM</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">F. Store all state in Google Cloud Storage, snapshot the persistent disks, and terminate the VM</li>
+</ul>
+    <div class="explanation">A: --no-auto-delete keeps persistent disks when VMs are stopped or deleted, so dev state survives frequent start/stop cycles.[file:1]
+D: Billing export to BigQuery plus labels lets finance break down costs per team, project, or environment.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 10</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You write a Python script to connect to Google BigQuery from a Google Compute Engine virtual machine. The script is printing errors that it cannot connect to BigQuery. What should you do to fix the script?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Install the latest BigQuery API client library for Python</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B. Run your script on a new virtual machine with the BigQuery access scope enabled</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Create a new service account with BigQuery access and execute your script with that user</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Install the bq component for gcloud with the command gcloud components install bq.</li>
+</ul>
+    <div class="explanation">B: Running on a VM with the BigQuery access scope enabled lets the script use application default credentials to call the API successfully.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 14</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">A production database virtual machine on Google Compute Engine has an ext4-formatted persistent disk for data files. The database is about to run out of storage space. How can you remediate the problem with the least amount of downtime?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A. In the Cloud Platform Console, increase the size of the persistent disk and use the resize2fs command in Linux.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Shut down the virtual machine, use the Cloud Platform Console to increase the persistent disk size, then restart the virtual machine</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. In the Cloud Platform Console, increase the size of the persistent disk and verify the new space is ready to use with the fdisk command in Linux</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. In the Cloud Platform Console, create a new persistent disk attached to the virtual machine, format and mount it, and configure the database service to move the files to the new disk</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">E. In the Cloud Platform Console, create a snapshot of the persistent disk restore the snapshot to a new larger disk, unmount the old disk, mount the new disk and restart the database service</li>
+</ul>
+    <div class="explanation">A: You can online‑resize an ext4 persistent disk by increasing its size and then running resize2fs without shutting down the VM, minimizing downtime.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 15</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your application needs to process credit card transactions. You want the smallest scope of Payment Card Industry (PCI) compliance without compromising the ability to analyze transactional data and trends relating to which payment methods are used. How should you design your architecture?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A. Create a tokenizer service and store only tokenized data</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Create separate projects that only process credit card data</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Create separate subnetworks and isolate the components that process credit card data</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Streamline the audit discovery phase by labeling all of the virtual machines (VMs) that process PCI data</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">E. Enable Logging export to Google BigQuery and use ACLs and views to scope the data shared with the auditor</li>
+</ul>
+    <div class="explanation">A: Tokenizing card data keeps raw PANs out of your systems, reducing PCI scope while preserving analytics on tokenized transactions.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 19</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">The database administration team has asked you to help them improve the performance of their new database server running on Google Compute Engine. The database is for importing and normalizing their performance statistics and is built with MySQL running on Debian Linux. They have an n1-standard-8 virtual machine with 80 GB of SSD persistent disk. What should they change to get better performance from this system?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Increase the virtual machine&#x27;s memory to 64 GB</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Create a new virtual machine running PostgreSQL</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C. Dynamically resize the SSD persistent disk to 500 GB</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Migrate their performance metrics warehouse to BigQuery</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">E. Modify all of their batch jobs to use bulk inserts into the database</li>
+</ul>
+    <div class="explanation">C: SSD persistent disk performance (IOPS/throughput) scales with disk size; increasing to 500 GB improves storage performance without changing the VM type.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 21</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company&#x27;s user-feedback portal comprises a standard LAMP stack replicated across two zones. It is deployed in the us-central1 region and uses autoscaled managed instance groups on all layers, except the database. Currently, only a small group of select customers have access to the portal. The portal meets a 99.99% availability SLA under these conditions. However next quarter, your company will be making the portal available to all users, including unauthenticated users. You need to develop a resiliency testing strategy to ensure the system maintains the SLA once they introduce additional user load. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A. Capture existing users input, and replay captured user load until autoscale is triggered on all layers. At the same time, terminate all resources in one of the zones</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Create synthetic random user input, replay synthetic load until autoscale logic is triggered on at least one layer, and introduce “chaos” to the system by terminating random resources on both zones</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Expose the new system to a larger group of users, and increase group size each day until autoscale logic is triggered on all layers. At the same time, terminate random resources on both zones</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Capture existing users input, and replay captured user load until resource utilization crosses 80%. Also, derive estimated number of users based on existing users&#x27; usage of the app, and deploy enough resources to handle 200% of expected load</li>
+</ul>
+    <div class="explanation">A: Replaying real user workloads while simulating a zonal outage validates autoscaling behavior and multi‑zone resilience under realistic traffic.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 22</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">One of the developers on your team deployed their application in Google Container Engine with the Dockerfile below. They report that their application deployments are taking too long. You want to optimize this Dockerfile for faster deployment times without adversely affecting the app&#x27;s functionality. Which two actions should you take? (Choose two.)</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Remove Python after running pip</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Remove dependencies from requirements.txt</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C. Use a slimmed-down base image like Alpine Linux</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Use larger machine types for your Google Container Engine node pools</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">E. Copy the source after the package dependencies (Python and pip) are installed</li>
+</ul>
+    <div class="explanation">C: Using a minimal base image like Alpine reduces image size and pull time, improving deploy speed.[file:1]
+E: Installing dependencies before copying source maximizes layer caching so subsequent builds are faster.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 23</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your solution is producing performance bugs in production that you did not see in staging and test environments. You want to adjust your test and deployment procedures to avoid this problem in the future. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Deploy fewer changes to production</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Deploy smaller changes to production</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C. Increase the load on your test and staging environments</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Deploy changes to a small subset of users before rolling out to production</li>
+</ul>
+    <div class="explanation">C: Increasing load on test and staging environments makes them more representative of production, surfacing performance issues earlier.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 25</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">During a high traffic portion of the day, one of your relational databases crashes, but the replica is never promoted to a master. You want to avoid this in the future. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Use a different database</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Choose larger instances for your database</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Create snapshots of your database more regularly</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D. Implement routinely scheduled failovers of your databases</li>
+</ul>
+    <div class="explanation">D: Regularly exercising failover ensures promotion processes and tooling work, reducing risk of failed promotions during real outages.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 30</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">A lead engineer wrote a custom tool that deploys virtual machines in the legacy data center. He wants to migrate the custom tool to the new cloud environment. You want to advocate for the adoption of Google Cloud Deployment Manager. What are two business risks of migrating to Cloud Deployment Manager? (Choose two.)</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Cloud Deployment Manager uses Python</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Cloud Deployment Manager APIs could be deprecated in the future</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C. Cloud Deployment Manager is unfamiliar to the company&#x27;s engineers</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Cloud Deployment Manager requires a Google APIs service account to run</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">E. Cloud Deployment Manager can be used to permanently delete cloud resources</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">F. Cloud Deployment Manager only supports automation of Google Cloud resources</li>
+</ul>
+    <div class="explanation">C: Engineers must learn a new tool, which carries training and productivity risk during adoption.[file:1]
+F: Deployment Manager only manages GCP resources, so it cannot orchestrate non‑GCP infrastructure, limiting multi‑platform strategies.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 31</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">A development manager is building a new application. He asks you to review his requirements and identify what cloud technologies he can use to meet them. The application must:
+1. Be based on open-source technology for cloud portability
+2. Dynamically scale compute capacity based on demand
+3. Support continuous software delivery
+4. Run multiple segregated copies of the same application stack
+5. Deploy application bundles using dynamic templates
+6. Route network traffic to specific services based on URL
+
+Which combination of technologies will meet all of his requirements?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A. Google Kubernetes Engine, Jenkins, and Helm</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Google Kubernetes Engine and Cloud Load Balancing</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Google Kubernetes Engine and Cloud Deployment Manager</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Google Kubernetes Engine, Jenkins, and Cloud Load Balancing</li>
+</ul>
+    <div class="explanation">A: GKE (Kubernetes) provides open‑source, scalable containers and namespaces; Jenkins supports CI/CD; Helm gives templated deployments, satisfying all listed needs.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 32</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You have created several pre-emptible Linux virtual machine instances using Google Compute Engine. You want to properly shut down your application before the virtual machines are preempted. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Create a shutdown script named k99.shutdown in the /etc/rc.6.d/ directory</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Create a shutdown script registered as a xinetd service in Linux and configure a Stackdriver endpoint check to call the service</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C. Create a shutdown script and use it as the value for a new metadata entry with the key shutdown-script in the Cloud Platform Console when you create the new virtual machine instance</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Create a shutdown script, registered as a xinetd service in Linux, and use the gcloud compute instances add-metadata command to specify the service URL as the value for a new metadata entry with the key shutdown-script-url</li>
+</ul>
+    <div class="explanation">C: Setting a metadata shutdown-script on the instance makes Compute Engine call it when the VM is preempted or stopped, allowing a graceful shutdown.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 36</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You created a pipeline that can deploy your source code changes to your infrastructure in instance groups for self-healing. One of the changes negatively affects your key performance indicator. You are not sure how to fix it, and investigation could take up to a week. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Log in to a server, and iterate on the fix locally</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B. Revert the source code change, and rerun the deployment pipeline</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Log into the servers with the bad code change, and swap in the previous code</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Change the instance group template to the previous one, and delete all instances</li>
+</ul>
+    <div class="explanation">B: Reverting and redeploying via the pipeline restores a known good state quickly and keeps all changes tracked in version control.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 38</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You deploy your custom Java application to Google App Engine. It fails to deploy and gives you a stack trace indicating missing classes. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A. Upload missing JAR files and redeploy your application.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Digitally sign all of your JAR files and redeploy your application</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Recompile the CloakedServlet class using an MD5 hash instead of SHA1</li>
+</ul>
+    <div class="explanation">A: A “ClassNotFound” or similar deployment error typically means required classes are missing from the deployment JAR/WAR, so you need to include them and redeploy.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 46</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You have an outage in your Compute Engine managed instance group: all instances keep restarting after 5 seconds. You have a health check configured, but autoscaling is disabled. Your colleague, who is a Linux expert, offered to look into the issue. You need to make sure that he can access the VMs. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Grant your colleague the IAM role of project Viewer</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Perform a rolling restart on the instance group</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C. Disable the health check for the instance group. Add his SSH key to the project-wide SSH Keys</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Disable autoscaling for the instance group. Add his SSH key to the project-wide SSH Keys</li>
+</ul>
+    <div class="explanation">C: Disabling the health check stops the group from constantly recreating instances, and adding his SSH key allows him to log in and debug.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 47</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company is migrating its on-premises data center into the cloud. As part of the migration, you want to integrate Google Kubernetes Engine (GKE) for workload orchestration. Parts of your architecture must also be PCI DSS-compliant. Which of the following is most accurate?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. App Engine is the only compute platform on GCP that is certified for PCI DSS hosting.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. GKE cannot be used under PCI DSS because it is considered shared hosting.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C. GKE and GCP provide the tools you need to build a PCI DSS-compliant environment.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. All Google Cloud services are usable because Google Cloud Platform is certified PCI-compliant.</li>
+</ul>
+    <div class="explanation">C: GKE and GCP include PCI‑eligible services and security features you can configure to build a PCI DSS‑compliant environment, but design and implementation remain your responsibility.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 52</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You have an application that will run on Compute Engine. You need to design an architecture that takes into account a disaster recovery plan that requires your application to fail over to another region in case of a regional outage. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Deploy the application on two Compute Engine instances in the same project but in a different region. Use the first instance to serve traffic, and use the HTTP load balancing service to fail over to the standby instance in case of a disaster.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Deploy the application on a Compute Engine instance. Use the instance to serve traffic, and use the HTTP load balancing service to fail over to an instance on your premises in case of a disaster.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C. Deploy the application on two Compute Engine instance groups, each in the same project but in a different region. Use the first instance group to serve traffic, and use the HTTP load balancing service to fail over to the standby instance group in case of a disaster.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Deploy the application on two Compute Engine instance groups, each in a separate project and a different region. Use the first instance group to serve traffic, and use the HTTP load balancing service to fail over to the standby instance group in case of a disaster.</li>
+</ul>
+    <div class="explanation">C: Using regional managed instance groups in two regions behind an HTTP(S) load balancer enables automatic health‑based failover across regions.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 56</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You have an application deployed on Google Kubernetes Engine using a Deployment named echo-deployment. The deployment is exposed using a Service called echo-service. You need to perform an update to the application with minimal downtime to the application. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A. Use kubectl set image deployment/echo-deployment &lt;new-image&gt;</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Use the rolling update functionality of the Instance Group behind the Kubernetes cluster</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Update the deployment yaml file with the new container image. Use kubectl delete deployment/echo-deployment and kubectl create -f &lt;yaml-file&gt;</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Update the service yaml file with the new container image. Use kubectl delete service/echo-service and kubectl create -f &lt;yaml-file&gt;</li>
+</ul>
+    <div class="explanation">A: kubectl set image on a Deployment triggers a rolling update managed by Kubernetes, replacing pods gradually and minimizing downtime.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 61</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">The development team has provided you with a Kubernetes Deployment file. You have no infrastructure yet and need to deploy the application. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Use gcloud to create a Kubernetes cluster. Use Deployment Manager to create the deployment.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B. Use gcloud to create a Kubernetes cluster. Use kubectl to create the deployment.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Use kubectl to create a Kubernetes cluster. Use Deployment Manager to create the deployment.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Use kubectl to create a Kubernetes cluster. Use kubectl to create the deployment.</li>
+</ul>
+    <div class="explanation">B: You create the GKE cluster using gcloud, then use kubectl (against that cluster) to apply the provided Deployment manifest.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 63</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are designing an application for use only during business hours. For the minimum viable product release, you&#x27;d like to use a managed product that automatically &#x27;scales to zero&#x27; so you don&#x27;t incur costs when there is no activity. Which primary compute resource should you choose?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A. Cloud Functions</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Compute Engine</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Google Kubernetes Engine</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. App Engine flexible environment</li>
+</ul>
+    <div class="explanation">A: Cloud Functions is fully managed and scales down to zero instances when idle, so you pay only when requests are served.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 67</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You have a Python web application with many dependencies that requires 0.1 CPU cores and 128 MB of memory to operate in production. You want to monitor and maximize machine utilization. You also want to reliably deploy new versions of the application. Which set of steps should you take?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Create a managed instance group with f1-micro instances and use startup scripts to deploy and update code.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Create a managed instance group with n1-standard-1 instances and bake a custom image for each release.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C. Create a GKE cluster with n1-standard-1 nodes; build a versioned Docker image and use Kubernetes Deployments to promote from staging to production.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Create a GKE cluster with n1-standard-4 nodes and use a &#x27;latest&#x27; tag with imagePullPolicy Always.</li>
+</ul>
+    <div class="explanation">C: Containerizing the app and using GKE Deployments with versioned images gives efficient packing of small pods and safe, repeatable rollouts.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 69</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are running a cluster on Kubernetes Engine (GKE) to serve a web application. Users are reporting that a specific part of the application is not responding anymore. You notice that all pods of your deployment keep restarting after 2 seconds. The application writes logs to standard output. You want to inspect the logs to find the cause of the issue. Which approach can you take?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Review the Stackdriver logs for each Compute Engine instance that is serving as a node in the cluster.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B. Review the Stackdriver logs for the specific GKE container that is serving the unresponsive part of the application.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Connect to the cluster using gcloud credentials and connect to a container in one of the pods to read the logs.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Review the Serial Port logs for each Compute Engine instance that is serving as a node in the cluster.</li>
+</ul>
+    <div class="explanation">B: GKE automatically sends container stdout/stderr to Cloud Logging, so viewing logs for the specific container is the fastest way to diagnose the crash loop.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 71</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company is running a stateless application on a Compute Engine instance. The application is used heavily during regular business hours and lightly outside of business hours. Users are reporting that the application is slow during peak hours. You need to optimize the application&#x27;s performance. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Create a snapshot of the existing disk. Create an instance template from the snapshot. Create an autoscaled managed instance group from the instance template.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Create a snapshot of the existing disk. Create a custom image from the snapshot. Create an autoscaled managed instance group from the custom image.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C. Create a custom image from the existing disk. Create an instance template from the custom image. Create an autoscaled managed instance group from the instance template.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Create an instance template from the existing disk. Create a custom image from the instance template. Create an autoscaled managed instance group from the custom image.</li>
+</ul>
+    <div class="explanation">C: Building a custom image from the current instance and using it in an instance template for a managed instance group allows autoscaling of identical stateless instances.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 73</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are using Cloud SQL as the database backend for a large CRM deployment. You want to scale as usage increases and ensure that you don&#x27;t run out of storage, maintain 75% CPU usage of cores, and keep replication lag below 60 seconds. What are the correct steps to meet your requirements?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A. Enable automatic storage increase; alert on CPU &gt;75% and resize; alert on replication lag and shard the database.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Enable automatic storage increase; switch to a 32-core machine; alert on lag and deploy memcache.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Alert when storage exceeds 75% and manually increase; deploy memcached; use a larger machine to reduce lag.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Alert when storage exceeds 75%; deploy memcached; alert on replication lag and then resize.</li>
+</ul>
+    <div class="explanation">A: Automatic storage increase prevents running out of disk, CPU alerts drive resizing, and sharding reduces replication lag by lowering load per shard.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 75</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You have deployed an application to Google Kubernetes Engine (GKE), and are using the Cloud SQL proxy container to make the Cloud SQL database available to the services running on Kubernetes. You are notified that the application is reporting database connection issues. Your company policies require a post-mortem. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Use gcloud sql instances restart.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Validate that the Service Account used by the Cloud SQL proxy container still has the Cloud Build Editor role.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C. In the GCP Console, navigate to Stackdriver Logging. Consult logs for GKE and Cloud SQL.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. In the GCP Console, navigate to Cloud SQL. Restore the latest backup. Use kubectl to restart all pods.</li>
+</ul>
+    <div class="explanation">C: Reviewing logs from both GKE and Cloud SQL is required to understand the root cause for a post‑mortem before taking recovery actions.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 79</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You want your Google Kubernetes Engine cluster to automatically add or remove nodes based on CPU load. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A. Configure a HorizontalPodAutoscaler with a target CPU usage. Enable the Cluster Autoscaler from the GCP Console.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Configure a HorizontalPodAutoscaler with a target CPU usage. Enable autoscaling on the managed instance group for the cluster using the gcloud command.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Create a deployment and set the maxUnavailable and maxSurge properties. Enable the Cluster Autoscaler using the gcloud command.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Create a deployment and set the maxUnavailable and maxSurge properties. Enable autoscaling on the cluster managed instance group from the GCP Console.</li>
+</ul>
+    <div class="explanation">A: HorizontalPodAutoscaler adjusts pod replicas, and cluster autoscaler adds/removes nodes to satisfy pod scheduling and target CPU usage.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 81</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company operates nationally and plans to use GCP for multiple batch workloads, including some that are not time-critical. You also need to use GCP services that are HIPAA-certified and manage service costs. How should you design to meet Google best practices?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Provision preemptible VMs to reduce cost. Discontinue use of all GCP services and APIs that are not HIPAA-compliant.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B. Provision preemptible VMs to reduce cost. Disable and then discontinue use of all GCP services and APIs that are not HIPAA-compliant.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Provision standard VMs in the same region to reduce cost. Discontinue use of all GCP services and APIs that are not HIPAA-compliant.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Provision standard VMs to the same region to reduce cost. Disable and then discontinue use of all GCP services and APIs that are not HIPAA-compliant.</li>
+</ul>
+    <div class="explanation">B: Preemptible VMs are suitable for non‑critical batch workloads to reduce cost, and only HIPAA‑eligible services and APIs should remain enabled for PHI.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 82</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your customer wants to do resilience testing of their authentication layer. This consists of a regional managed instance group serving a public REST API that reads from and writes to a Cloud SQL instance. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Hire a security company to search for leaked credentials online.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Deploy intrusion detection software to the VMs.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Schedule a disaster simulation exercise where you shut off all VMs in a zone.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D. Configure a read replica for Cloud SQL in a different zone and manually trigger a failover while monitoring KPIs.</li>
+</ul>
+    <div class="explanation">D: Configuring a replica and manually failing over tests database resilience and API behavior during failover while observing KPIs.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 84</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You want to automate the creation of a managed instance group. The VMs have many OS package dependencies. You want to minimize the startup time for new VMs in the instance group. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Use Terraform to create the MIG and a startup script to install dependencies.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B. Create a custom VM image with all dependencies. Use Deployment Manager to create the MIG with this image.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Use Puppet to create the MIG and install dependencies.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Use Deployment Manager to create the MIG and Ansible to install dependencies.</li>
+</ul>
+    <div class="explanation">B: Baking all OS dependencies into a custom image minimizes per‑instance startup time in the managed instance group.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 87</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your web application uses Google Kubernetes Engine to manage several workloads. One workload requires a consistent set of hostnames even after pod scaling and relaunches. Which feature of Kubernetes should you use to accomplish this?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A. StatefulSets</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Role-based access control</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Container environment variables</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Persistent Volumes</li>
+</ul>
+    <div class="explanation">A: StatefulSets provide stable network identities for pods, preserving hostnames and persistent identities across restarts and scaling.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 88</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are using Cloud CDN to deliver static HTTP(S) website content hosted on a Compute Engine instance group. You want to improve the cache hit ratio. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A. Customize the cache keys to omit the protocol from the key.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Shorten the expiration time of the cached objects.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Make sure the HTTP(S) header &quot;Cache-Region&quot; points to the closest region of your users.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Replicate the static content in a Cloud Storage bucket. Point Cloud CDN toward a load balancer on that bucket.</li>
+</ul>
+    <div class="explanation">A: Removing protocol from the cache key reduces key cardinality so the same content is reused regardless of HTTP vs HTTPS, improving cache hit ratio.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 90</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You have an App Engine application that needs to be updated. You want to test the update with production traffic before replacing the current application version. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Use the Instance Group Updater for a partial rollout.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B. Deploy the update as a new version in the App Engine app and split traffic between versions.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Deploy the update in a new VPC and use global HTTP load balancing to split traffic.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Deploy the update as a new App Engine application and use global HTTP load balancing to split traffic.</li>
+</ul>
+    <div class="explanation">B: App Engine supports multiple versions and built‑in traffic splitting, enabling canary testing with production traffic.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 93</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">A development team at your company has created a dockerized HTTPS web application. You need to deploy the application on Google Kubernetes Engine (GKE) and make sure that the application scales automatically. How should you deploy to GKE?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A. Use the Horizontal Pod Autoscaler and enable cluster autoscaling. Use an Ingress resource for HTTPS load balancing.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Use the Horizontal Pod Autoscaler and cluster autoscaling. Use a Service of type LoadBalancer for HTTPS.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Enable autoscaling on the Compute Engine instance group. Use an Ingress resource.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Enable autoscaling on the instance group. Use a Service of type LoadBalancer.</li>
+</ul>
+    <div class="explanation">A: HPA plus cluster autoscaler handle pod and node scaling, and Ingress provides HTTP(S) L7 load balancing for the web app.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 100</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You need to ensure reliability for your application and operations by supporting reliable task scheduling for compute on GCP. Leveraging Google best practices, what should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Use App Engine Cron to call a service directly on Compute Engine.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B. Use App Engine Cron to publish to a Pub/Sub topic and have a Compute Engine service subscribe.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Use GKE Cron to call a service directly on Compute Engine.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Use GKE Cron to publish to a Pub/Sub topic and have a Compute Engine service subscribe.</li>
+</ul>
+    <div class="explanation">B: App Engine Cron plus Pub/Sub decouples scheduling from processing and provides at‑least‑once delivery, improving reliability of background tasks.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 103</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company is planning to perform a lift and shift migration of their Linux RHEL 6.5+ virtual machines. The virtual machines are running in an on-premises VMware environment. You want to migrate them to Compute Engine following Google-recommended practices. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Define a migration plan and migrate each VM individually with Migrate for Compute Engine.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Assess VMs, create and import disk images, and create VMs from them.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C. Assess VMs, define a migration plan, prepare a Migrate for Compute Engine Runbook, and execute the migration.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Assess VMs, install a third-party agent, and migrate all VMs.</li>
+</ul>
+    <div class="explanation">C: Google recommends assessing workloads, planning, and using Migrate for Compute Engine with a migration Runbook for structured lift‑and‑shift.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 104</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You need to deploy an application to Google Cloud. The application receives traffic via TCP and reads and writes data to the filesystem. The application does not support horizontal scaling. The application process requires full control over the data on the file system because concurrent access causes corruption. The business is willing to accept a downtime when an incident occurs, but the application must be available 24/7 to support their business operations. You need to design the architecture of this application on Google Cloud. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Managed instance group in multiple zones, Cloud Filestore, HTTP load balancer.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B. Managed instance group in multiple zones, Cloud Filestore, network load balancer.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Unmanaged instance group with active/standby, regional persistent disk, HTTP load balancer.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Unmanaged instance group with active/standby, regional persistent disk, network load balancer.</li>
+</ul>
+    <div class="explanation">B: For TCP traffic and active/passive behavior with shared file storage, use a managed instance group, Cloud Filestore, and a TCP/UDP network load balancer.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 106</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are managing an application deployed on Cloud Run for Anthos, and you need to define a strategy for deploying new versions of the application. You want to evaluate the new code with a subset of production traffic to decide whether to proceed with the rollout. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A. Deploy a new revision to Cloud Run and configure traffic percentage between revisions.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Deploy a new service to Cloud Run and front both with a Cloud Load Balancer.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Use Cloud Build substitutions to control traffic percentage at deploy time.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Configure Traffic Director with a new Service pointing to the new version and send a small percentage of traffic to it.</li>
+</ul>
+    <div class="explanation">A: Cloud Run supports multiple revisions and built‑in traffic splitting, enabling canary deployments without extra control planes.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 110</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company has announced that they will be outsourcing operations functions. You want to allow developers to easily stage new versions of a cloud-based application in the production environment and allow the outsourced operations team to autonomously promote staged versions to production. You want to minimize the operational overhead of the solution. Which Google Cloud product should you migrate to?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. App Engine</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. GKE On-Prem</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Compute Engine</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D. Google Kubernetes Engine</li>
+</ul>
+    <div class="explanation">D: GKE plus CI/CD can let developers stage versions and allow an operations team to manage promotions, with lower ops overhead than managing raw VMs.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 111</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company is running its application workloads on Compute Engine. The applications have been deployed in production, acceptance, and development environments. The production environment is business-critical and is used 24/7, while the acceptance and development environments are only critical during office hours. Your CFO has asked you to optimize these environments to achieve cost savings during idle times. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Use a scheduled script on a production instance to downsize other instances after hours.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B. Use Cloud Scheduler to trigger a Cloud Function that stops acceptance and development instances after office hours and starts them before office hours.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C. Deploy acceptance and development apps on a managed instance group with autoscaling.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Use preemptible VMs for acceptance and development.</li>
+</ul>
+    <div class="explanation">B: Cloud Scheduler + Cloud Functions can automate stopping and starting non‑production instances around office hours, reducing cost without manual intervention.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 112</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are moving an application that uses MySQL from on-premises to Google Cloud. The application will run on Compute Engine and will use Cloud SQL. You want to cut over to the Compute Engine deployment of the application with minimal downtime and no data loss to your customers. You want to migrate the application with minimal modification. You also need to determine the cutover strategy. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Dump to Cloud Storage, import into Cloud SQL, then dual‑write temporarily.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Dump to Cloud Storage, import to Cloud SQL, stop on‑prem app, start GCE app.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C. Connect GCE app to on‑prem MySQL over VPN, then configure Cloud SQL as a replica; later promote the replica and point the app to it.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Stop on‑prem app, dump and import to Cloud SQL, start the GCE app.</li>
+</ul>
+    <div class="explanation">C: Using Cloud SQL as a replica of on‑prem MySQL enables near‑zero‑downtime cutover; promoting the replica after it catches up avoids data loss.[file:1]</div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 116</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You have developed a non-critical update to your application that is running in a managed instance group, and have created a new instance template with the update that you want to release. To prevent any possible impact to the application, you don&#x27;t want to update any running instances. You want any new instances that are created by the managed instance group to contain the new update. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A. Start a new rolling restart operation.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B. Start a new rolling replace operation.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C. Update the instance template only.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D. Manually recreate all instances.</li>
+</ul>
+    <div class="explanation">C: Updating the instance template without initiating a rollout lets only newly created instances use the new template, leaving current instances untouched.[file:1]
+
+======================================================================
+END OF TOPIC 1
+======================================================================</div>
+  </div>
+</div></div>
+</div>
+<script>
+/* ── THEME ── */
+(function(){
+  var saved = localStorage.getItem('pca-theme') ||
+    (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+
+function toggleTheme(){
+  var next = document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('pca-theme', next);
+  var btn = document.getElementById('theme-label');
+  if(btn) btn.textContent = next==='dark' ? '☀️ Light mode' : '🌙 Dark mode';
+}
+
+/* ── FLASHCARDS ── */
+function flip(el){ el.classList.toggle('flipped'); }
+
+/* ── Q&A ── */
+var score = {correct:0, wrong:0};
+function updateStats(){
+  document.getElementById('s-correct').textContent = score.correct;
+  document.getElementById('s-wrong').textContent   = score.wrong;
+  document.getElementById('s-total').textContent   =
+    document.querySelectorAll('.qa-card').length;
+}
+
+function answer(btn, isCorrect){
+  var card = btn.closest('.qa-card');
+  if(card.dataset.answered) return;
+  card.dataset.answered = '1';
+  card.querySelectorAll('.choice').forEach(function(c){
+    if(c.dataset.correct==='1') c.classList.add('correct');
+    else if(c===btn) c.classList.add('wrong');
+  });
+  card.querySelector('.explanation').classList.add('visible');
+  if(isCorrect) score.correct++; else score.wrong++;
+  updateStats();
+}
+
+/* ── TABS ── */
+function switchTab(name){
+  document.querySelectorAll('.tab-btn').forEach(function(b){
+    b.classList.toggle('active', b.dataset.tab===name);
+  });
+  document.querySelectorAll('.tab-content').forEach(function(t){
+    t.classList.toggle('active', t.id==='tab-'+name);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  updateStats();
+  var btn = document.getElementById('theme-label');
+  if(btn){
+    var current = document.documentElement.getAttribute('data-theme');
+    btn.textContent = current==='dark' ? '☀️ Light mode' : '🌙 Dark mode';
+  }
+});
+</script>
+</body>
+</html>

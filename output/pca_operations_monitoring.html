@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PCA &ndash; OPERATIONS &amp; MONITORING</title>
+<style>
+/* ── THEME TOKENS ── */
+:root {
+  --bg:#0f1117;--surface:#1a1d27;--card:#1e2130;--border:#2e3250;
+  --accent:#4f8ef7;--green:#3ecf7c;--red:#f75f5f;--yellow:#f7c948;
+  --text:#e4e8f0;--muted:#7b8099;--radius:14px;
+  --shadow:0 8px 28px #0006;
+}
+[data-theme="light"] {
+  --bg:#f0f2f8;--surface:#ffffff;--card:#ffffff;--border:#d0d5e8;
+  --accent:#2563eb;--green:#16a34a;--red:#dc2626;--yellow:#ca8a04;
+  --text:#1e2130;--muted:#64748b;
+  --shadow:0 4px 20px #0001;
+}
+
+/* ── RESET ── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;
+  min-height:100vh;padding:2rem 1rem;transition:background .25s,color .25s}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;
+  max-width:1200px;margin:0 auto 1.5rem}
+h1{font-size:1.7rem;font-weight:700}
+.subtitle{text-align:center;color:var(--muted);font-size:.9rem;margin-bottom:2rem}
+
+/* ── THEME TOGGLE ── */
+.theme-toggle{display:flex;align-items:center;gap:.5rem;cursor:pointer;
+  background:var(--surface);border:1px solid var(--border);border-radius:99px;
+  padding:.35rem .9rem;font-size:.8rem;color:var(--muted);
+  transition:all .2s;user-select:none}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.toggle-track{width:36px;height:20px;border-radius:99px;background:var(--border);
+  position:relative;transition:background .25s}
+.toggle-thumb{width:14px;height:14px;border-radius:50%;background:#fff;
+  position:absolute;top:3px;left:3px;transition:transform .25s,background .25s;
+  box-shadow:0 1px 3px #0003}
+[data-theme="light"] .toggle-track{background:var(--accent)}
+[data-theme="light"] .toggle-thumb{transform:translateX(16px)}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:.5rem;justify-content:center;margin-bottom:2rem;flex-wrap:wrap}
+.tab-btn{padding:.5rem 1.4rem;border-radius:99px;border:2px solid var(--border);
+  background:transparent;color:var(--muted);cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.tab-content{display:none}.tab-content.active{display:block}
+
+/* ── FLASHCARDS ── */
+.deck-header{text-align:center;color:var(--muted);margin-bottom:1.5rem;font-size:.85rem}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.2rem}
+.flashcard{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.flashcard:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.card-header{display:flex;align-items:center;justify-content:space-between;
+  padding:.75rem 1rem;border-bottom:1px solid var(--border);background:var(--surface)}
+.card-title{font-weight:700;font-size:.95rem}
+.badge{font-size:.7rem;padding:.2rem .6rem;border-radius:99px;
+  background:var(--border);color:var(--accent)}
+.card-body{padding:1.1rem}
+.card-front p{font-size:.85rem;color:var(--muted);margin-bottom:.5rem}
+.card-front h3{font-size:1rem;font-weight:600;line-height:1.4}
+.card-back{display:none}
+.flashcard.flipped .card-front{display:none}
+.flashcard.flipped .card-back{display:block}
+.field{margin-bottom:.75rem}
+.field-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--accent);margin-bottom:.25rem}
+.field-value{font-size:.82rem;color:var(--text);line-height:1.5}
+.flip-hint{font-size:.7rem;color:var(--muted);text-align:right;margin-top:.6rem}
+.scenario-box{background:var(--surface);border-left:3px solid var(--yellow);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;margin-top:.5rem;font-size:.82rem}
+.answer-box{background:var(--surface);border-left:3px solid var(--green);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;margin-top:.4rem;font-size:.82rem}
+
+/* ── Q&A ── */
+.qa-grid{display:grid;gap:1.2rem}
+.qa-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.qa-header{display:flex;align-items:center;justify-content:space-between;
+  padding:.7rem 1rem;background:var(--surface);border-bottom:1px solid var(--border)}
+.qa-label{font-size:.8rem;font-weight:700;color:var(--accent)}
+.qa-url{font-size:.7rem;color:var(--muted);text-decoration:none}
+.qa-url:hover{color:var(--accent)}
+.qa-body{padding:1rem}
+.qa-question{font-size:.9rem;line-height:1.5;margin-bottom:.8rem;font-weight:500}
+.choices{list-style:none;display:grid;gap:.4rem}
+.choice{padding:.5rem .8rem;border-radius:8px;border:1px solid var(--border);
+  font-size:.82rem;cursor:pointer;transition:all .2s;user-select:none}
+.choice:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.choice.correct{background:color-mix(in srgb,var(--green) 12%,transparent);
+  border-color:var(--green);color:var(--green)}
+.choice.wrong{background:color-mix(in srgb,var(--red) 12%,transparent);
+  border-color:var(--red);color:var(--red)}
+.explanation{display:none;margin-top:.8rem;font-size:.82rem;line-height:1.5;
+  background:var(--surface);border-left:3px solid var(--accent);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;color:var(--muted)}
+.explanation.visible{display:block}
+
+/* ── STATS ── */
+.stats-bar{display:flex;gap:1rem;justify-content:center;margin-bottom:1.5rem;flex-wrap:wrap}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:.5rem 1.1rem;text-align:center;min-width:90px}
+.stat-num{font-size:1.4rem;font-weight:700}
+.stat-label{font-size:.7rem;color:var(--muted)}
+.stat.green .stat-num{color:var(--green)}
+.stat.red .stat-num{color:var(--red)}
+.stat.yellow .stat-num{color:var(--yellow)}
+</style>
+<script>
+(function(){
+  var t=localStorage.getItem('pca-theme')||
+    (window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');
+  document.documentElement.setAttribute('data-theme',t);
+})();
+</script>
+</head>
+<body>
+<div class="topbar">
+  <h1>PCA &mdash; OPERATIONS &amp; MONITORING</h1>
+  <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+    <span id="theme-label">&#9728;&#65039; Light mode</span>
+  </button>
+</div>
+<p class="subtitle">High-signal patterns for the PCA exam.</p>
+<div class="tabs"><button class="tab-btn active" data-tab="flashcards" onclick="switchTab('flashcards')">&#128218; Flashcards</button><button class="tab-btn" data-tab="exam-qa" onclick="switchTab('exam-qa')">&#129514; Exam Q&amp;A</button></div>
+
+<div id="tab-flashcards" class="tab-content active">
+  <p class="deck-header">Showing 12 cards &mdash; click to flip</p>
+  <div class="cards-grid">
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cloud Monitoring</span>
+    <span class="badge">Operations &amp; Monitoring</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Managed monitoring service that collects metrics, tracks uptime, powers dashboards, and supports alerting for infrastructure and applications.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Service health monitoring; performance tracking; SLO and SLA measurement; dashboarding; resource utilization visibility; uptime checks.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Raw log retention and search without metrics use cases; archival-only requirements; teams that need monitoring but do not define meaningful service indicators.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Strong real-time operational visibility and alerting vs. dependence on well-defined metrics and thresholds to avoid noisy or low-value monitoring.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Build dashboards around business-critical systems and service-level indicators instead of collecting everything without purpose. Limit dashboard and metric access to authorized operators and support teams.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A team needs dashboards for CPU, memory, latency, error rate, and uptime, plus automated notifications when service health degrades.</div><div class="answer-box">Use Cloud Monitoring to track metrics, define uptime checks, and create alerting policies.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cloud Logging</span>
+    <span class="badge">Operations &amp; Monitoring</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Managed centralized logging service that stores, searches, filters, and routes logs from Google Cloud resources and applications.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Troubleshooting production incidents; audit analysis; centralized application and infrastructure log collection; exporting logs to downstream systems.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Replacing structured metrics for latency or error threshold monitoring; keeping all logs forever without retention planning; treating logs as the only observability signal.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Detailed event visibility and searchable diagnostics vs. potential cost and noise if log volume is not controlled.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Create retention and export strategies so expensive or sensitive logs are stored appropriately. Protect logs carefully because they can contain IPs, metadata, stack traces, and operational details.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">Engineers need to investigate why a production service failed overnight and want to search application and infrastructure events from one place.</div><div class="answer-box">Use Cloud Logging for centralized log collection, filtering, and analysis.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Log-Based Metrics</span>
+    <span class="badge">Operations &amp; Monitoring</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Custom metrics generated from log entries so operational events recorded in logs can drive dashboards and alerting.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Error-count alerts; application event thresholds; patterns that exist in logs but are not exposed as native metrics; operational tracking of specific log events.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Cases where a native platform metric already exists and is more direct; overly broad log parsing that creates noisy or high-cardinality metrics.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Converts rich log data into actionable metrics vs. requiring careful filter design to avoid false positives and unnecessary cost.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use narrow filters and only create metrics for meaningful operational events. Avoid exposing sensitive payload details through labels or downstream dashboards.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A team wants an alert whenever 404 responses exceed 5 percent of total requests in a short time window, but the signal exists in request logs.</div><div class="answer-box">Create a log-based metric and attach an alerting policy to it.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Alerting Policies</span>
+    <span class="badge">Operations &amp; Monitoring</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Configurable rules in Cloud Monitoring that notify operators when metric, uptime, or log-based conditions meet defined thresholds.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Incident detection; service-level monitoring; operations response workflows; on-call notification for production systems.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Environments with no clear thresholds, no response owner, or alerts configured for every possible signal without prioritization.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Faster incident response and reduced downtime vs. alert fatigue if thresholds, grouping, or severity are poorly designed.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Alert only on actionable conditions with clear owners and escalation paths. Avoid exposing sensitive details in notification channels and incident messages.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company wants immediate notification when API error rate or latency exceeds acceptable production thresholds.</div><div class="answer-box">Configure alerting policies in Cloud Monitoring using the appropriate metrics or log-based metrics.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Uptime Checks</span>
+    <span class="badge">Operations &amp; Monitoring</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Monitoring probes that test the availability and responsiveness of public endpoints from multiple locations.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Public websites; APIs; externally reachable services; basic verification that a service is available to users.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Deep internal dependency diagnosis; private-only services without the required access path; replacing full application health instrumentation.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Simple external availability validation vs. limited insight into internal root cause.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use uptime checks with alerting for critical public services. Be careful when exposing health endpoints so they reveal minimal sensitive information.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company wants to know quickly if its public website becomes unreachable from the internet.</div><div class="answer-box">Configure uptime checks and connect them to an alerting policy.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Dashboard-Based Operations</span>
+    <span class="badge">Operations &amp; Monitoring</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Operational practice of combining metrics, charts, incidents, and service health indicators into dashboards for real-time visibility.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">NOC views; SRE workflows; executive service health summaries; platform operations; application troubleshooting.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Teams that rely only on raw logs or manual ad hoc inspection during incidents without prebuilt visibility.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Faster understanding of system state vs. time required to define meaningful and non-noisy visualizations.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Build dashboards around critical user journeys and infrastructure dependencies, not around vanity metrics. Restrict access because dashboards may expose internal topology or sensitive operational data.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">Operators need a single view showing service uptime, request rate, error rate, latency, and infrastructure health during incidents.</div><div class="answer-box">Use Cloud Monitoring dashboards to centralize operational visibility.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Centralized Log Routing</span>
+    <span class="badge">Operations &amp; Monitoring</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Logging architecture pattern where logs are collected centrally and optionally exported to destinations such as analytics or archival systems.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Compliance retention; security analysis; organization-wide observability; long-term log storage; centralized operations teams.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Keeping all logs indefinitely in default storage without retention planning; assuming centralized collection alone replaces incident response workflows.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better governance, searchability, and downstream analytics vs. added design decisions around retention, routing, and storage cost.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Export long-term or high-volume logs to the appropriate destination to control cost. Apply access controls carefully because centralized logs may reveal activity across many systems.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">An enterprise wants centralized visibility for logs across projects and also wants to retain selected logs for longer-term analysis.</div><div class="answer-box">Use centralized log routing with exports to the appropriate storage or analytics destination.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Incident-Driven Monitoring Design</span>
+    <span class="badge">Operations &amp; Monitoring</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Monitoring approach where metrics, logs, and alerts are designed around real production failure modes and customer-impacting symptoms.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Mature production systems; SRE-aligned environments; organizations wanting actionable monitoring instead of noisy telemetry collection.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Monitoring setups based only on default charts or collecting every possible metric without linking them to service impact.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Higher signal quality and better operational response vs. more upfront thought about service objectives and failure modes.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Focus on user-impacting indicators such as latency, availability, and error rate to reduce noise and spend. Monitoring design should avoid exposing confidential details while still enabling incident response.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A team wants its observability platform to detect real customer-impacting issues instead of generating large volumes of low-value alerts.</div><div class="answer-box">Design monitoring around actionable service indicators and incident-driven alerting conditions.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Alert Fatigue Reduction</span>
+    <span class="badge">Operations &amp; Monitoring</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Operational practice of reducing noisy, duplicate, low-priority, or unactionable alerts so on-call teams focus on important incidents.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Teams with growing systems, multiple alert sources, and on-call engineers suffering from too many notifications.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Environments that add alerts for every metric without ownership, prioritization, or tuning.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Fewer, higher-value incidents vs. the need for disciplined threshold tuning and continuous alert review.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Poor alert design wastes staff time and can cause real incidents to be missed. Group related alerts, use severity appropriately, and notify only the right responders.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">An operations team receives too many alerts, many of which are duplicates or non-actionable, and is missing important production problems.</div><div class="answer-box">Tune alerting policies to focus on actionable signals and reduce alert fatigue.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Structured Application Logging</span>
+    <span class="badge">Operations &amp; Monitoring</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Practice of emitting application logs in structured fields rather than unstructured text so logs can be filtered, parsed, and analyzed more effectively.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Production services; microservices; systems where logs support troubleshooting, metric extraction, and cross-service correlation.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Free-form logging with inconsistent message formats that make filtering and automation difficult.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better searchability and automation vs. more discipline in application logging design.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Structured logs make it easier to build log-based metrics and incident filters, but sensitive data should never be logged unnecessarily. Standardize fields like severity, service name, request ID, and error code.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A platform team wants reliable filters and log-based alerts for specific application failures across many services.</div><div class="answer-box">Implement structured application logging so logs can be queried and transformed into operational signals.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Monitoring for Autoscaling and Reliability</span>
+    <span class="badge">Operations &amp; Monitoring</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Observability practice of tracking utilization, saturation, request behavior, and backend dependency health to ensure scaling and resilience mechanisms work correctly.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Autoscaled applications; load-balanced services; backend systems with variable traffic; production systems where capacity issues cause user-visible failures.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Assuming autoscaling works correctly without telemetry or testing under realistic traffic conditions.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better confidence in scaling behavior and failure detection vs. extra setup for metrics, dashboards, and load validation.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Monitoring scaling signals helps prevent both underprovisioning and overspending. Include backend metrics, not just frontend metrics, because hidden dependency failures often surface as user-facing errors.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A service begins returning errors during traffic spikes and the team needs to determine whether the issue comes from load, scaling, or backend dependency health.</div><div class="answer-box">Use monitoring dashboards, logs, and alerts to validate autoscaling behavior and backend health signals.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Operations Visibility for Production Readiness</span>
+    <span class="badge">Operations &amp; Monitoring</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture principle that production systems should be observable enough to support troubleshooting, incident response, trend analysis, and service improvement.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Business-critical systems; customer-facing applications; regulated environments; teams practicing continuous improvement and SRE methods.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Deployments that go live with no dashboards, no alerts, limited logs, and no understanding of normal system behavior.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better operational readiness and faster recovery vs. added implementation effort and some telemetry management overhead.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Production readiness includes dashboards, alerts, logs, escalation ownership, and retention policies. Visibility should be deliberate and secure, not accidental or excessive.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company is preparing a customer-facing service for production and wants to ensure operators can quickly detect, diagnose, and respond to incidents.</div><div class="answer-box">Build production readiness around monitoring, logging, and alerting before launch.</div></div>
+    </div>
+  </div>
+</div></div>
+</div>
+
+<div id="tab-exam-qa" class="tab-content">
+  <div class="stats-bar">
+    <div class="stat green"><div class="stat-num" id="s-correct">0</div><div class="stat-label">Correct</div></div>
+    <div class="stat red"><div class="stat-num" id="s-wrong">0</div><div class="stat-label">Wrong</div></div>
+    <div class="stat yellow"><div class="stat-num" id="s-total">0</div><div class="stat-label">Total</div></div>
+  </div>
+  <div class="qa-grid">
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 5</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">An application development team believes their current logging tool will not meet their needs for their new cloud-based product. They want a better tool to capture errors and help them analyze their historical log data. You want to help them find a solution that meets their needs. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Direct them to download and install the Google StackDriver logging agent</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Send them a list of online resources about logging best practices</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Help them define their requirements and assess viable logging tools</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Help them upgrade their current tool to take advantage of any new features</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 13</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your customer is receiving reports that their recently updated Google App Engine application is taking approximately 30 seconds to load for some of their users. This behavior was not reported before the update. What strategy should you take?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Work with your ISP to diagnose the problem</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Open a support ticket to ask for network capture and flow data to diagnose the problem, then roll back your application</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Roll back to an earlier known good release initially, then use Stackdriver Trace and Logging to diagnose the problem in a development/test/staging environment</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Roll back to an earlier known good release, then push the release again at a quieter period to investigate. Then use Stackdriver Trace and Logging to diagnose the problem</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 24</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">A small number of API requests to your microservices-based application take a very long time. You know that each request to the API can traverse many services. You want to know which service takes the longest in those cases. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Set timeouts on your application so that you can fail requests faster</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Send custom metrics for each of your requests to Stackdriver Monitoring</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Use Stackdriver Monitoring to look for insights that show when your API latencies are high</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Instrument your application with Stackdriver Trace in order to break down the request latencies at each microservice</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 26</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your organization requires that metrics from all applications be retained for 5 years for future analysis in possible legal proceedings. Which approach should you use?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Grant the security team access to the logs in each Project</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Configure Stackdriver Monitoring for all Projects, and export to BigQuery</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Configure Stackdriver Monitoring for all Projects with the default retention policies</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Configure Stackdriver Monitoring for all Projects, and export to Google Cloud Storage</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 34</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your development team has installed a new Linux kernel module on the batch servers in Google Compute Engine (GCE) virtual machines (VMs) to speed up the nightly batch process. Two days after the installation, 50% of the batch servers failed the nightly batch run. You want to collect details on the failure to pass back to the development team. Which three actions should you take? (Choose three.)</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Use Stackdriver Logging to search for the module log entries</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Read the debug GCE Activity log using the API or Cloud Console</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Use gcloud or Cloud Console to connect to the serial console and observe the logs</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Identify whether a live migration event of the failed server occurred, using in the activity log</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">E.Adjust the Google Stackdriver timeline to match the failure time, and observe the batch server metrics</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">F.Export a debug VM into an image, and run the image on a local server where kernel log messages will be displayed on the native screen</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 89</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your architecture calls for the centralized collection of all admin activity and VM system logs within your project. How should you collect these logs from both VMs and services?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.All admin and VM system logs are automatically collected by Stackdriver.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Stackdriver automatically collects admin activity logs for most services. The Stackdriver Logging agent must be installed on each instance to collect system logs.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Launch a custom syslogd compute instance and configure your GCP project and VMs to forward all logs to it.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Install the Stackdriver Logging agent on a single compute instance and let it collect all audit and access logs for your environment.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 92</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your customer runs a web service used by e-commerce sites to offer product recommendations to users. The company has begun experimenting with a machine learning model on Google Cloud Platform to improve the quality of results. What should the customer do to improve their model&#x27;s results over time?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Export Cloud Machine Learning Engine performance metrics from Stackdriver to BigQuery, to be used to analyze the efficiency of the model.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Build a roadmap to move the machine learning model training from Cloud GPUs to Cloud TPUs, which offer better results.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Monitor Compute Engine announcements for availability of newer CPU architectures, and deploy the model to them as soon as they are available for additional performance.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Save a history of recommendations and results of the recommendations in BigQuery, to be used as training data.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 96</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You need to develop procedures to test a disaster plan for a mission-critical application. You want to use Google-recommended practices and native capabilities within GCP. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Use Deployment Manager to automate service provisioning. Use Activity Logs to monitor and debug your tests.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Use Deployment Manager to automate service  provisioning. Use Stackdriver to monitor and debug your tests.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Use gcloud scripts to automate service provisioning. Use Activity Logs to monitor and debug your tests.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Use gcloud scripts to automate service provisioning. Use Stackdriver to monitor and debug your tests.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 107</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are monitoring Google Kubernetes Engine (GKE) clusters in a Cloud Monitoring workspace. As a Site Reliability Engineer (SRE), you need to triage incidents quickly. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Navigate the predefined dashboards in the Cloud Monitoring workspace, and then add metrics and create alert policies.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Navigate the predefined dashboards in the Cloud Monitoring workspace, create custom metrics, and install alerting software on a Compute Engine instance.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Write a shell script that gathers metrics from GKE nodes, publish these metrics to a Pub/Sub topic, export the data to BigQuery, and make a Data Studio dashboard.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create a custom dashboard in the Cloud Monitoring workspace for each incident, and then add metrics and create alert policies.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 122</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You have an application that runs in Google Kubernetes Engine (GKE). Over the last 2 weeks, customers have reported that a specific part of the application returns errors very frequently. You currently have no logging or monitoring solution enabled on your GKE cluster. You want to diagnose the problem, but you have not been able to replicate the issue. You want to cause minimal disruption to the application. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.1. Update your GKE cluster to use Cloud Operations for GKE. 2. Use the GKE Monitoring dashboard to investigate logs from affected Pods.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.1. Create a new GKE cluster with Cloud Operations for GKE enabled. 2. Migrate the affected Pods to the new cluster, and redirect traffic for those Pods to the new cluster. 3. Use the GKE Monitoring dashboard to investigate logs from affected Pods.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.1. Update your GKE cluster to use Cloud Operations for GKE, and deploy Prometheus. 2. Set an alert to trigger whenever the application returns an error.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.1. Create a new GKE cluster with Cloud Operations for GKE enabled, and deploy Prometheus. 2. Migrate the affected Pods to the new cluster, and redirect traffic for those Pods to the new cluster. 3. Set an alert to trigger whenever the application returns an error.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 153</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You have deployed an application on Anthos clusters (formerly Anthos GKE). According to the SRE practices at your company, you need to be alerted if request latency is above a certain threshold for a specified amount of time. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Install Anthos Service Mesh on your cluster. Use the Google Cloud Console to define a Service Level Objective (SLO), and create an alerting policy based on this SLO.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Enable the Cloud Trace API on your project, and use Cloud Monitoring Alerts to send an alert based on the Cloud Trace metrics.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Use Cloud Profiler to follow up the request latency. Create a custom metric in Cloud Monitoring based on the results of Cloud Profiler, and create an Alerting policy in case this metric exceeds the threshold.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Configure Anthos Config Management on your cluster, and create a yaml file that defines the SLO and alerting policy you want to deploy in your cluster.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 161</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">A recent audit revealed that a new network was created in your GCP project. In this network, a GCE instance has an SSH port open to the world. You want to discover this network&#x27;s origin. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Search for Create VM entry in the Stackdriver alerting console</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Navigate to the Activity page in the Home section. Set category to Data Access and search for Create VM entry</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.In the Logging section of the console, specify GCE Network as the logging section. Search for the Create Insert entry</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Connect to the GCE instance using project SSH keys. Identify previous logins in system logs, and match these with the project owners list</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 173</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">The operations team in your company wants to save Cloud VPN log events for one year. You need to configure the cloud infrastructure to save the logs. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Set up a filter in Cloud Logging and a Cloud Storage bucket as an export target for the logs you want to save.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Enable the Compute Engine API, and then enable logging on the firewall rules that match the traffic you want to save.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Set up a Cloud Logging Dashboard titled Cloud VPN Logs, and then add a chart that queries for the VPN metrics over a one-year time period.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Set up a filter in Cloud Logging and a topic in Pub/Sub to publish the logs.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 2 | Question 4</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">JencoMart has built a version of their application on Google Cloud Platform that serves traffic to Asia. You want to measure success against their business and technical goals. Which metrics should you track?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Error rates for requests from Asia</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Latency difference between US and Asia</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Total visits, error rates, and latency from Asia</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Total visits and average latency for users from Asia</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">E.The number of character sets present in the database</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 7 | Question 3</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Mountkirk Games wants to limit the physical location of resources to their operating Google Cloud regions. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Configure an organizational policy which constrains where resources can be deployed.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Configure IAM conditions to limit what resources can be configured.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Configure the quotas for resources in the regions not being used to 0.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Configure a custom alert in Cloud Monitoring so you can disable resources as they are created in other regions.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 8 | Question 5</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You analyzed TerramEarth&#x27;s business requirement to reduce downtime, and found that they can achieve a majority of time saving by reducing customer&#x27;s wait time for parts. You decided to focus on reduction of the 3 weeks aggregate reporting time. Which modifications to the company&#x27;s processes should you recommend?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Migrate from CSV to binary format, migrate from FTP to SFTP transport, and develop machine learning analysis of metrics</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Migrate from FTP to streaming transport, migrate from CSV to binary format, and develop machine learning analysis of metrics</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Increase fleet cellular connectivity to 80%, migrate from FTP to streaming transport, and develop machine learning analysis of metrics</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Migrate from FTP to SFTP transport, develop machine learning analysis of metrics, and increase dealer local inventory by a fixed factor</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 10 | Question 3</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the TerramEarth case study. You are migrating a Linux-based application from your private data center to Google Cloud. The TerramEarth security team sent you several recent Linux vulnerabilities published by Common Vulnerabilities and Exposures (CVE). You need assistance in understanding how these vulnerabilities could impact your migration. What should you do? (Choose two.)</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Open a support case regarding the CVE and chat with the support engineer.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Read the CVEs from the Google Cloud Status Dashboard to understand the impact.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Read the CVEs from the Google Cloud Platform Security Bulletins to understand the impact.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Post a question regarding the CVE in Stack Overflow to get an explanation.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">E.Post a question regarding the CVE in a Google Cloud discussion group to get an explanation.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 11 | Question 4</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">As part of Dress4Win&#x27;s plans to migrate to the cloud, they want to be able to set up a managed logging and monitoring system so they can handle spikes in their traffic load. They want to ensure that: * The infrastructure can be notified when it needs to scale up and down to handle the ebb and flow of usage throughout the day * Their administrators are notified automatically when their application reports errors. * They can filter their aggregated logs down in order to debug one piece of the application across many hosts Which Google StackDriver features should they use?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Logging, Alerts, Insights, Debug</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Monitoring, Trace, Debug, Logging</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Monitoring, Logging, Alerts, Error Reporting</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Monitoring, Logging, Debug, Error Report</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 11 | Question 7</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Dress4Win has configured a new uptime check with Google Stackdriver for several of their legacy services. The Stackdriver dashboard is not reporting the services as healthy. What should they do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Install the Stackdriver agent on all of the legacy web servers.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.In the Cloud Platform Console download the list of the uptime servers&#x27; IP addresses and create an inbound firewall rule</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Configure their load balancer to pass through the User-Agent HTTP header when the value matches GoogleStackdriverMonitoring-UptimeChecks (https:// cloud.google.com/monitoring)</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Configure their legacy web servers to allow requests that contain user-Agent HTTP header when the value matches GoogleStackdriverMonitoring- UptimeChecks (https://cloud.google.com/monitoring)</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 11 | Question 9</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Dress4Win has end-to-end tests covering 100% of their endpoints. They want to ensure that the move to the cloud does not introduce any new bugs. Which additional testing methods should the developers employ to prevent an outage?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.They should enable Google Stackdriver Debugger on the application code to show errors in the code.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.They should add additional unit tests and production scale load tests on their cloud staging environment.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.They should run the end-to-end tests in the cloud staging environment to determine if the code is working as intended.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.They should add canary tests so developers can measure how much of an impact the new release causes to latency.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 12 | Question 4</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the Dress4Win case study. To be legally compliant during an audit, Dress4Win must be able to give insights in all administrative actions that modify the configuration or metadata of resources on Google Cloud. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Use Stackdriver Trace to create a Trace list analysis.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Use Stackdriver Monitoring to create a dashboard on the project&#x27;s activity.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Enable Cloud Identity-Aware Proxy in all projects, and add the group of Administrators as a member.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Use the Activity page in the GCP Console and Stackdriver Logging to provide the required insight.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div></div>
+</div>
+<script>
+/* ── THEME ── */
+(function(){
+  var saved = localStorage.getItem('pca-theme') ||
+    (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+
+function toggleTheme(){
+  var next = document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('pca-theme', next);
+  var btn = document.getElementById('theme-label');
+  if(btn) btn.textContent = next==='dark' ? '☀️ Light mode' : '🌙 Dark mode';
+}
+
+/* ── FLASHCARDS ── */
+function flip(el){ el.classList.toggle('flipped'); }
+
+/* ── Q&A ── */
+var score = {correct:0, wrong:0};
+function updateStats(){
+  document.getElementById('s-correct').textContent = score.correct;
+  document.getElementById('s-wrong').textContent   = score.wrong;
+  document.getElementById('s-total').textContent   =
+    document.querySelectorAll('.qa-card').length;
+}
+
+function answer(btn, isCorrect){
+  var card = btn.closest('.qa-card');
+  if(card.dataset.answered) return;
+  card.dataset.answered = '1';
+  card.querySelectorAll('.choice').forEach(function(c){
+    if(c.dataset.correct==='1') c.classList.add('correct');
+    else if(c===btn) c.classList.add('wrong');
+  });
+  card.querySelector('.explanation').classList.add('visible');
+  if(isCorrect) score.correct++; else score.wrong++;
+  updateStats();
+}
+
+/* ── TABS ── */
+function switchTab(name){
+  document.querySelectorAll('.tab-btn').forEach(function(b){
+    b.classList.toggle('active', b.dataset.tab===name);
+  });
+  document.querySelectorAll('.tab-content').forEach(function(t){
+    t.classList.toggle('active', t.id==='tab-'+name);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  updateStats();
+  var btn = document.getElementById('theme-label');
+  if(btn){
+    var current = document.documentElement.getAttribute('data-theme');
+    btn.textContent = current==='dark' ? '☀️ Light mode' : '🌙 Dark mode';
+  }
+});
+</script>
+</body>
+</html>

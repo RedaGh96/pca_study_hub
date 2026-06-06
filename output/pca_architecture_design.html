@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PCA &ndash; Architecture Design</title>
+<style>
+/* ── THEME TOKENS ── */
+:root {
+  --bg:#0f1117;--surface:#1a1d27;--card:#1e2130;--border:#2e3250;
+  --accent:#4f8ef7;--green:#3ecf7c;--red:#f75f5f;--yellow:#f7c948;
+  --text:#e4e8f0;--muted:#7b8099;--radius:14px;
+  --shadow:0 8px 28px #0006;
+}
+[data-theme="light"] {
+  --bg:#f0f2f8;--surface:#ffffff;--card:#ffffff;--border:#d0d5e8;
+  --accent:#2563eb;--green:#16a34a;--red:#dc2626;--yellow:#ca8a04;
+  --text:#1e2130;--muted:#64748b;
+  --shadow:0 4px 20px #0001;
+}
+
+/* ── RESET ── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;
+  min-height:100vh;padding:2rem 1rem;transition:background .25s,color .25s}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;
+  max-width:1200px;margin:0 auto 1.5rem}
+h1{font-size:1.7rem;font-weight:700}
+.subtitle{text-align:center;color:var(--muted);font-size:.9rem;margin-bottom:2rem}
+
+/* ── THEME TOGGLE ── */
+.theme-toggle{display:flex;align-items:center;gap:.5rem;cursor:pointer;
+  background:var(--surface);border:1px solid var(--border);border-radius:99px;
+  padding:.35rem .9rem;font-size:.8rem;color:var(--muted);
+  transition:all .2s;user-select:none}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.toggle-track{width:36px;height:20px;border-radius:99px;background:var(--border);
+  position:relative;transition:background .25s}
+.toggle-thumb{width:14px;height:14px;border-radius:50%;background:#fff;
+  position:absolute;top:3px;left:3px;transition:transform .25s,background .25s;
+  box-shadow:0 1px 3px #0003}
+[data-theme="light"] .toggle-track{background:var(--accent)}
+[data-theme="light"] .toggle-thumb{transform:translateX(16px)}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:.5rem;justify-content:center;margin-bottom:2rem;flex-wrap:wrap}
+.tab-btn{padding:.5rem 1.4rem;border-radius:99px;border:2px solid var(--border);
+  background:transparent;color:var(--muted);cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.tab-content{display:none}.tab-content.active{display:block}
+
+/* ── FLASHCARDS ── */
+.deck-header{text-align:center;color:var(--muted);margin-bottom:1.5rem;font-size:.85rem}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.2rem}
+.flashcard{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.flashcard:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.card-header{display:flex;align-items:center;justify-content:space-between;
+  padding:.75rem 1rem;border-bottom:1px solid var(--border);background:var(--surface)}
+.card-title{font-weight:700;font-size:.95rem}
+.badge{font-size:.7rem;padding:.2rem .6rem;border-radius:99px;
+  background:var(--border);color:var(--accent)}
+.card-body{padding:1.1rem}
+.card-front p{font-size:.85rem;color:var(--muted);margin-bottom:.5rem}
+.card-front h3{font-size:1rem;font-weight:600;line-height:1.4}
+.card-back{display:none}
+.flashcard.flipped .card-front{display:none}
+.flashcard.flipped .card-back{display:block}
+.field{margin-bottom:.75rem}
+.field-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--accent);margin-bottom:.25rem}
+.field-value{font-size:.82rem;color:var(--text);line-height:1.5}
+.flip-hint{font-size:.7rem;color:var(--muted);text-align:right;margin-top:.6rem}
+.scenario-box{background:var(--surface);border-left:3px solid var(--yellow);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;margin-top:.5rem;font-size:.82rem}
+.answer-box{background:var(--surface);border-left:3px solid var(--green);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;margin-top:.4rem;font-size:.82rem}
+
+/* ── Q&A ── */
+.qa-grid{display:grid;gap:1.2rem}
+.qa-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.qa-header{display:flex;align-items:center;justify-content:space-between;
+  padding:.7rem 1rem;background:var(--surface);border-bottom:1px solid var(--border)}
+.qa-label{font-size:.8rem;font-weight:700;color:var(--accent)}
+.qa-url{font-size:.7rem;color:var(--muted);text-decoration:none}
+.qa-url:hover{color:var(--accent)}
+.qa-body{padding:1rem}
+.qa-question{font-size:.9rem;line-height:1.5;margin-bottom:.8rem;font-weight:500}
+.choices{list-style:none;display:grid;gap:.4rem}
+.choice{padding:.5rem .8rem;border-radius:8px;border:1px solid var(--border);
+  font-size:.82rem;cursor:pointer;transition:all .2s;user-select:none}
+.choice:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.choice.correct{background:color-mix(in srgb,var(--green) 12%,transparent);
+  border-color:var(--green);color:var(--green)}
+.choice.wrong{background:color-mix(in srgb,var(--red) 12%,transparent);
+  border-color:var(--red);color:var(--red)}
+.explanation{display:none;margin-top:.8rem;font-size:.82rem;line-height:1.5;
+  background:var(--surface);border-left:3px solid var(--accent);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;color:var(--muted)}
+.explanation.visible{display:block}
+
+/* ── STATS ── */
+.stats-bar{display:flex;gap:1rem;justify-content:center;margin-bottom:1.5rem;flex-wrap:wrap}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:.5rem 1.1rem;text-align:center;min-width:90px}
+.stat-num{font-size:1.4rem;font-weight:700}
+.stat-label{font-size:.7rem;color:var(--muted)}
+.stat.green .stat-num{color:var(--green)}
+.stat.red .stat-num{color:var(--red)}
+.stat.yellow .stat-num{color:var(--yellow)}
+</style>
+<script>
+(function(){
+  var t=localStorage.getItem('pca-theme')||
+    (window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');
+  document.documentElement.setAttribute('data-theme',t);
+})();
+</script>
+</head>
+<body>
+<div class="topbar">
+  <h1>PCA &mdash; Architecture Design</h1>
+  <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+    <span id="theme-label">&#9728;&#65039; Light mode</span>
+  </button>
+</div>
+<p class="subtitle">High-signal patterns for the PCA exam.</p>
+<div class="tabs"><button class="tab-btn active" data-tab="flashcards" onclick="switchTab('flashcards')">&#128218; Flashcards</button><button class="tab-btn" data-tab="exam-qa" onclick="switchTab('exam-qa')">&#129514; Exam Q&amp;A</button></div>
+
+<div id="tab-flashcards" class="tab-content active">
+  <p class="deck-header">Showing 23 cards &mdash; click to flip</p>
+  <div class="cards-grid">
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Requirements-Driven Design</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture approach that starts from business, technical, compliance, availability, and cost requirements before selecting services.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Exam scenarios where multiple solutions are technically possible and the correct answer depends on constraints like budget, latency, RTO/RPO, compliance, or operational simplicity.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Ad hoc solution selection based only on preferred technology without validating business requirements.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Produces the most appropriate architecture for the actual business need, but requires careful analysis before implementation.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Define measurable targets such as uptime, RTO, RPO, latency, and data residency early. Security and compliance requirements must be treated as first-class design inputs, not later add-ons.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company asks for a new architecture for a customer-facing platform. They mention low cost, EU data residency, and recovery from regional failures within one hour.</div><div class="answer-box">Start with requirements-driven design and choose services and topology that satisfy cost, residency, and recovery objectives rather than selecting products first.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Managed Services First</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Design principle that favors fully managed Google Cloud services over self-managed infrastructure whenever they satisfy the workload requirements.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Teams that want to reduce patching, scaling, failover, backups, and operational burden while accelerating delivery.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Workloads requiring OS-level control, unsupported software, custom kernel modules, hardware-specific licensing, or deep platform customization.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Lower operational overhead and faster delivery vs. reduced low-level control and customization.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Managed services often reduce hidden operating cost and lower misconfiguration risk. Use IAM, CMEK where required, and private connectivity options to keep managed services aligned with enterprise security.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company can run its application either on self-managed VMs or on a managed serverless platform, and there is no requirement for OS-level access.</div><div class="answer-box">Choose the managed service first because it meets the requirement with less operational overhead.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Regional Architecture</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Application design pattern where resources are deployed in one Google Cloud region, typically across multiple zones for higher availability.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Workloads serving one geography, applications with moderate disaster recovery requirements, and systems where lower cost and simpler operations are more important than surviving a full regional outage automatically.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Mission-critical global systems requiring continued service during regional failures with minimal disruption.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Simpler and less expensive than multi-region architecture, but cannot fully protect against a complete regional outage by itself.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use multiple zones within the region to remove zonal single points of failure. Store backups or replicated data in another region if regional disaster recovery is required.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">An internal business application must survive zonal failures, but the business accepts several hours of downtime in the event of a regional disaster.</div><div class="answer-box">Use a regional architecture spread across multiple zones, with cross-region backups for disaster recovery.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Multi-Regional Architecture</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture pattern that places application components and/or data across multiple regions to improve resilience, global reach, and fault tolerance.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Business-critical applications with strict uptime targets, global user bases, and low RTO/RPO requirements.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Small internal systems, development environments, or cost-sensitive workloads without strong cross-region availability requirements.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Strong resilience and lower user latency globally vs. higher complexity, replication challenges, and increased cost.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Replicate only critical tiers and datasets to control cost. Ensure IAM, secrets, encryption, and organization policies are applied consistently across all regions.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A retail platform must continue serving users even if an entire region becomes unavailable.</div><div class="answer-box">Use a multi-regional architecture with global traffic distribution and replicated services or data stores that support regional failover.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Active-Active Design</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Resilience pattern where multiple environments or regions simultaneously serve production traffic.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Low-latency global applications, very high availability requirements, and services where fast failover is essential.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Simple workloads with limited budget, architectures with difficult write-conflict handling, or applications that do not justify the operational complexity.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Fast failover and better utilization of deployed capacity vs. more complex replication, consistency, testing, and traffic management.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Requires duplicated running capacity, which increases cost. Validate identity, policy, logging, and secrets configuration consistently in every active environment.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A payment platform must stay online during a regional outage and continue serving users from another region with minimal failover delay.</div><div class="answer-box">Use an active-active multi-region architecture with globally distributed traffic routing and replicated backend services.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Active-Passive Design</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Resilience pattern where one environment actively serves traffic and another standby environment is used only during failover.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Disaster recovery architectures where lower cost is preferred over instant failover, and where short recovery time is acceptable.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Applications requiring near-zero failover time or constant global low-latency access from multiple regions.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Lower running cost and simpler data consistency than active-active, but failover takes longer and standby resources may be underutilized.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use automation for failover and regular testing to avoid broken standby systems. Backups, IAM, and secrets must be maintained in the passive environment as well.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company wants disaster recovery in another region but needs to minimize steady-state cost and can tolerate a short failover process.</div><div class="answer-box">Use an active-passive architecture with a warm or cold standby in a secondary region.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Stateless Application Tier</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Design approach where application instances do not keep session or business state on local disk or in-memory only on one node.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Web tiers, APIs, microservices, and autoscaled services behind load balancers.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Legacy applications that require sticky local state and cannot externalize sessions or shared state.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Easier scaling, replacement, and recovery vs. the need for external state stores such as databases, caches, or object storage.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Externalize state to managed storage or cache services and protect those systems with IAM and network controls. Stateless design reduces recovery time because failed instances can be recreated safely.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A web application behind a load balancer must auto-scale rapidly across zones without breaking user sessions.</div><div class="answer-box">Make the application tier stateless and store session data in an external shared service.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Loose Coupling with Pub/Sub</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Event-driven architecture pattern where producers and consumers are decoupled through asynchronous messaging using Pub/Sub.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Systems that need elastic scaling, independent service evolution, workload buffering, and resilience against temporary downstream failures.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Strict synchronous request-response workflows where the caller requires an immediate transactional result.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better resilience and scalability vs. added complexity in event handling, retries, and eventual consistency.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Pub/Sub can absorb traffic spikes and smooth backend load, reducing overprovisioning cost. Restrict publishers and subscribers with least-privilege IAM roles.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">Orders arrive unpredictably and downstream inventory and billing services must process them independently without losing messages during spikes.</div><div class="answer-box">Use Pub/Sub to decouple producers from consumers and allow asynchronous scaling.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Caching Layer Design</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture pattern that stores frequently accessed data closer to the application or user to reduce latency and backend load.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Read-heavy workloads, repeated queries, session storage, and high-traffic web applications needing faster response times.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Highly volatile data that changes constantly and cannot tolerate stale reads, or workloads with minimal read reuse.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better latency and reduced backend load vs. cache invalidation complexity and potential stale data.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Proper caching can reduce database or compute cost significantly. Protect cache access through private networking and avoid storing sensitive data unless the security model is clear.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A product catalog application receives heavy repeated read traffic and the database is becoming a bottleneck.</div><div class="answer-box">Add a caching layer such as Memorystore to reduce repeated database reads and improve response time.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Global External HTTP(S) Load Balancing Design</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture choice that uses Google’s global anycast HTTP(S) load balancing to distribute user traffic to the best available backends.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Global web applications, multi-region frontends, path-based routing, SSL termination at the edge, and Cloud CDN integration.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Internal-only services, non-HTTP workloads, or small single-region apps that do not need global traffic steering.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Excellent global routing and edge capabilities vs. more configuration complexity than a simple regional setup.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use managed certificates, Cloud Armor, and Cloud CDN where appropriate. Centralized load balancing reduces exposure by standardizing frontend security controls.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company serves users worldwide and wants traffic sent to the nearest healthy region using one public IP and one HTTPS endpoint.</div><div class="answer-box">Use the global external HTTP(S) load balancer with multi-region backends.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Queue-Based Buffering</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture pattern that places a durable queue or messaging system between producers and workers to smooth bursts and protect downstream services.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Batch processing, asynchronous tasks, bursty ingestion pipelines, and systems where producers generate work faster than consumers can process it at peak times.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Real-time synchronous transactions that require immediate end-user confirmation from all downstream systems.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Improves durability and absorbs spikes vs. increased end-to-end processing latency and eventual consistency.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Buffering lets worker fleets scale based on queue depth, which reduces overprovisioning cost. Secure producers and consumers with IAM and private service communication where possible.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">An image-processing system receives large unpredictable upload spikes and workers fail when traffic arrives too fast.</div><div class="answer-box">Introduce a queue or Pub/Sub-based buffering layer so workers process tasks asynchronously at a controlled rate.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Data Store Selection by Access Pattern</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture decision process that chooses storage and database technologies based on workload behavior such as OLTP, analytics, key-value, time-series, or object storage.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Exam questions where several storage services are possible and the correct answer depends on consistency, scale, query type, mutation pattern, and latency.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">One-size-fits-all thinking where a familiar database is used for every workload regardless of its access pattern.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Best performance and cost efficiency when matched correctly, but requires careful understanding of workload characteristics.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Choosing the wrong database increases both cost and operational complexity. Apply least privilege, encryption, backup, and residency controls according to the selected store.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A team wants one system for time-series sensor ingestion, another for global relational transactions, and another for ad hoc analytics on historical data.</div><div class="answer-box">Match services to patterns: Bigtable for high-scale time-series, Spanner for global relational transactions, and BigQuery for analytical queries.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">RTO/RPO-Based Disaster Recovery Design</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Disaster recovery planning approach that selects backup, replication, and failover strategies according to target recovery time and recovery point objectives.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Critical systems where business impact determines how much downtime and data loss are acceptable.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Architectures chosen without defined recovery targets, or workloads where no one has clarified acceptable outage and data loss thresholds.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Lower RTO and RPO require more automation, replication, and cost; relaxed targets allow cheaper and simpler solutions.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Align spending with business impact instead of overbuilding every system. Protect backups with IAM, retention policies, encryption, and separation from the primary failure domain.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">One application can tolerate 24 hours of recovery and some data loss, while another must recover in minutes with almost no data loss.</div><div class="answer-box">Design separate DR strategies based on each system’s RTO and RPO rather than applying one identical architecture to both.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Backup and Restore Design</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Protection strategy that focuses on creating recoverable copies of data and systems to restore service after corruption, deletion, or disaster.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Workloads needing recovery from operator error, ransomware, accidental deletion, or application-level corruption.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Treating high availability alone as a replacement for backups.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Simpler and less expensive than full multi-region hot redundancy, but restoration takes time and may lose recent data depending on backup frequency.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use lifecycle policies, versioning, and backup retention aligned to compliance and business needs. Store backups outside the primary failure domain and control restore permissions carefully.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A database is highly available across zones, but the company also needs recovery from accidental table deletion from the previous day.</div><div class="answer-box">Implement backup and restore design because HA does not protect against logical deletion or corruption.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Least-Privilege IAM Design</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Security design principle that grants identities only the minimum permissions required to perform their tasks.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">All production architectures, especially environments with separation of duties, regulated data, or multiple teams.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Broad project-wide primitive roles granted for convenience, especially in production.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Stronger security and reduced blast radius vs. more effort in role design and access management.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use predefined or custom roles scoped narrowly to the needed resource level. Least privilege reduces the impact of credential theft, insider misuse, and accidental changes.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A development team needs to deploy services but must not manage networking or access sensitive production data.</div><div class="answer-box">Grant narrowly scoped IAM roles aligned to deployment tasks, not broad owner or editor permissions.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Network Segmentation Design</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture approach that separates workloads by environment, sensitivity, or function using projects, VPC design, firewall rules, and service perimeters.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Enterprises with production and non-production isolation, sensitive data boundaries, and clear separation of duties.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Flat network designs where all workloads communicate freely without clear trust boundaries.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better security and governance vs. added design and operational complexity.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Segmenting environments reduces lateral movement risk and supports compliance. Use Shared VPC, firewall policies, and VPC Service Controls where appropriate.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company wants central network governance, isolated production workloads, and protection against data exfiltration from managed services.</div><div class="answer-box">Use segmented project and network design with Shared VPC and VPC Service Controls where required.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Private Connectivity Design</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture principle of keeping service-to-service and hybrid connectivity on private paths instead of exposing workloads directly to the public internet.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Hybrid connectivity, private APIs, regulated workloads, internal services, and organizations minimizing internet exposure.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Architectures that unnecessarily expose internal systems publicly when private connectivity options exist.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Stronger security posture and reduced public attack surface vs. additional setup and possible higher connectivity cost.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use private IPs, Private Google Access, Cloud VPN, Interconnect, and internal load balancing according to the requirement. Minimize public IP usage and enforce least-privilege firewall rules.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">Backend services and private VMs need to access Google APIs and on-premises systems without assigning public IPs.</div><div class="answer-box">Design with private connectivity options such as Private Google Access plus VPN or Interconnect as required.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Observability by Design</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture practice of embedding logging, monitoring, alerting, tracing, and SLO-oriented visibility into the system from the beginning.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Production systems requiring reliable operations, rapid troubleshooting, performance visibility, and service health tracking.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Waiting until after production incidents to add logs, metrics, or dashboards.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better operational insight and faster incident response vs. added setup work and potential telemetry cost if poorly controlled.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Collect the logs and metrics needed for operations and compliance, but avoid excessive noisy telemetry. Restrict access to observability data because logs can contain sensitive metadata.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A business-critical application must alert operators when latency or error rates exceed service objectives and provide enough information to debug quickly.</div><div class="answer-box">Design observability into the architecture with Cloud Monitoring, Cloud Logging, alerting policies, and service-level objectives.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cost-Optimized Architecture</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Design approach that meets functional and non-functional requirements with the lowest reasonable cost, without sacrificing required reliability, security, or performance.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Most exam questions that mention budget constraints, uncertain traffic, or the need to avoid overprovisioning.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Over-engineered architectures that add multi-region, always-on capacity, or self-managed components without clear business need.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Lower spend and simpler operations vs. potentially less headroom for extreme scenarios that are not part of the stated requirements.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Use autoscaling, storage tiering, serverless scale-to-zero, committed discounts for steady workloads, and Spot VMs for fault-tolerant jobs. Optimize for the stated requirement, not for hypothetical future needs.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A startup needs a scalable public API with unpredictable traffic and wants to minimize idle infrastructure cost.</div><div class="answer-box">Choose a cost-optimized architecture such as serverless or autoscaled managed services instead of permanently provisioned infrastructure.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Performance-Optimized Architecture</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Design approach that prioritizes low latency, high throughput, and efficient resource usage by choosing the right compute, network, cache, and database patterns.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">User-facing apps with strict latency needs, large-scale data processing, HPC, and high-throughput transactional systems.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Cases where performance is moderate and the additional complexity or cost is not justified by business requirements.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better speed and throughput vs. potentially higher infrastructure cost and more specialized architecture decisions.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Place workloads near users or data, minimize cross-region transfers, and use caching or specialized databases where appropriate. Performance tuning must still respect IAM, encryption, and network security controls.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A service is suffering from high latency because every request queries the primary database in another region and no caching layer exists.</div><div class="answer-box">Redesign for performance by colocating services appropriately and adding caching to reduce cross-region dependency and database load.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Compliance and Data Residency Design</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture approach that ensures data location, retention, access, and controls align with legal, industry, or organizational compliance requirements.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Regulated industries, region-restricted data, audit-heavy environments, and enterprise governance models.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Architectures that replicate or expose data across locations without checking residency or regulatory requirements.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better regulatory alignment and reduced compliance risk vs. reduced flexibility in service placement and architecture choices.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Select regions carefully, control replication, apply CMEK where required, and enforce access boundaries with IAM and organizational policies. Compliance needs can override cost or convenience preferences.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A healthcare application must store and process sensitive records only in approved regions and maintain strict auditability.</div><div class="answer-box">Design for compliance and residency first by selecting approved regions and enforcing controlled access, logging, and encryption policies.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Migration with Minimal Refactoring</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture strategy that prioritizes fast migration of existing workloads with the least application change, often as a first phase before modernization.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Tight migration deadlines, legacy systems, risk-sensitive enterprises, and workloads that cannot be rewritten immediately.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">New greenfield systems or cases where cloud-native redesign is practical and strongly beneficial from the start.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Faster migration with lower immediate risk vs. reduced long-term cloud optimization and potentially higher operating cost.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Lift-and-shift may preserve inefficiencies, so plan later optimization phases. Use secure landing zones, IAM, logging, and network controls even when applications are not yet modernized.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company must exit a data center quickly and move a legacy application to Google Cloud with as few code changes as possible.</div><div class="answer-box">Use a minimal-refactoring migration approach first, then optimize or modernize after stabilization.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Modernize to Cloud-Native</span>
+    <span class="badge">Architecture Design</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Architecture strategy that redesigns applications to use managed, containerized, serverless, and event-driven cloud services for better agility and scalability.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Applications expected to evolve quickly, systems with variable traffic, and organizations seeking operational efficiency and faster feature delivery.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Legacy applications with tight deadlines, strict compatibility constraints, or no budget for redesign effort.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better scalability, agility, and operational efficiency vs. higher upfront redesign effort and migration complexity.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Cloud-native design often lowers long-term operations cost and improves resilience, but migration effort can be significant. Use secure-by-default managed services, least-privilege IAM, and observability from the beginning.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company is redesigning a monolith into independently deployable services that scale based on demand and minimize operational overhead.</div><div class="answer-box">Modernize to a cloud-native architecture using managed and loosely coupled services.</div></div>
+    </div>
+  </div>
+</div></div>
+</div>
+
+<div id="tab-exam-qa" class="tab-content">
+  <div class="stats-bar">
+    <div class="stat green"><div class="stat-num" id="s-correct">0</div><div class="stat-label">Correct</div></div>
+    <div class="stat red"><div class="stat-num" id="s-wrong">0</div><div class="stat-label">Wrong</div></div>
+    <div class="stat yellow"><div class="stat-num" id="s-total">0</div><div class="stat-label">Total</div></div>
+  </div>
+  <div class="qa-grid">
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 6</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You need to reduce the number of unplanned rollbacks of erroneous production deployments in your company&#x27;s web hosting platform. Improvement to the QA/ Test processes accomplished an 80% reduction. Which additional two approaches can you take to further reduce the rollbacks? (Choose two.)</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Introduce a green-blue deployment model</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Replace the QA environment with canary releases</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Fragment the monolithic platform into microservices</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Reduce the platform&#x27;s dependency on relational database systems</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">E.Replace the platform&#x27;s relational database systems with a NoSQL database</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 29</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are designing a large distributed application with 30 microservices. Each of your distributed microservices needs to connect to a database back-end. You want to store the credentials securely. Where should you store the credentials?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.In the source code</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.In an environment variable</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.In a secret management system</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.In a config file that has restricted access through ACLs</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 45</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are building a continuous deployment pipeline for a project stored in a Git source repository and want to ensure that code changes can be verified before deploying to production. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Use Spinnaker to deploy builds to production using the red/black deployment strategy so that changes can easily be rolled back.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Use Spinnaker to deploy builds to production and run tests on production deployments.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Use Jenkins to build the staging branches and the master branch. Build and deploy changes to production for 10% of users before doing a complete rollout.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Use Jenkins to monitor tags in the repository. Deploy staging tags to a staging environment for testing. After testing, tag the repository for production and deploy that to the production environment.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 137</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company provides a recommendation engine for retail customers. You are providing retail customers with an API where they can submit a user ID and the API returns a list of recommendations for that user. You are responsible for the API lifecycle and want to ensure stability for your customers in case the API makes backward-incompatible changes. You want to follow Google-recommended practices. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Create a distribution list of all customers to inform them of an upcoming backward-incompatible change at least one month before replacing the old API with the new API.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Create an automated process to generate API documentation, and update the public API documentation as part of the CI/CD process when deploying an update to the API.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Use a versioning strategy for the APIs that increases the version number on every backward-incompatible change.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Use a versioning strategy for the APIs that adds the suffix ג€DEPRECATEDג€ to the current API version number on every backward-incompatible change. Use the current version number for the new API.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 138</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company has developed a monolithic, 3-tier application to allow external users to upload and share files. The solution cannot be easily enhanced and lacks reliability. The development team would like to re-architect the application to adopt microservices and a fully managed service approach, but they need to convince their leadership that the effort is worthwhile. Which advantage(s) should they highlight to leadership?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.The new approach will be significantly less costly, make it easier to manage the underlying infrastructure, and automatically manage the CI/CD pipelines.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.The monolithic solution can be converted to a container with Docker. The generated container can then be deployed into a Kubernetes cluster.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.The new approach will make it easier to decouple infrastructure from application, develop and release new features, manage the underlying infrastructure, manage CI/CD pipelines and perform A/B testing, and scale the solution if necessary.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.The process can be automated with Migrate for Compute Engine.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 166</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your company places a high value on being responsive and meeting customer needs quickly. Their primary business objectives are release speed and agility. You want to reduce the chance of security errors being accidentally introduced. Which two actions can you take? (Choose two.)</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Ensure every code check-in is peer reviewed by a security SME</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Use source code security analyzers as part of the CI/CD pipeline</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Ensure you have stubs to unit test all interfaces between components</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Enable code signing and a trusted binary repository integrated with your CI/CD pipeline</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">E.Run a vulnerability security scanner as part of your continuous-integration /continuous-delivery (CI/CD) pipeline</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 4 | Question 2</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/60423-exam-professional-cloud-architect-topic-4-question-2/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the EHR Healthcare case study. You need to define the technical architecture for securely deploying workloads to Google Cloud. You also need to ensure that only verified containers are deployed using Google Cloud services. What should you do? (Choose two.)</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Enable Binary Authorization on GKE, and sign containers as part of a CI/CD pipeline.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Configure Jenkins to utilize Kritis to cryptographically sign a container as part of a CI/CD pipeline.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Configure Container Registry to only allow trusted service accounts to create and deploy containers from the registry.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Configure Container Registry to use vulnerability scanning to confirm that there are no vulnerabilities before deploying the workload.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 5 | Question 2</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/9190-exam-professional-cloud-architect-topic-5-question-2/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Mountkirk Games has deployed their new backend on Google Cloud Platform (GCP). You want to create a through testing process for new versions of the backend before they are released to the public. You want the testing environment to scale in an economical way. How should you design the process?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Create a scalable environment in GCP for simulating production load</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Use the existing infrastructure to test the GCP-based backend at scale</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Build stress tests into each component of your application using resources internal to GCP to simulate load</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Create a set of static environments in GCP to test different levels of load ג€&quot; for example, high, medium, and low</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 8 | Question 1</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/11084-exam-professional-cloud-architect-topic-8-question-1/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">TerramEarth&#x27;s CTO wants to use the raw data from connected vehicles to help identify approximately when a vehicle in the field will have a catastrophic failure. You want to allow analysts to centrally query the vehicle data. Which architecture should you recommend? A. B. C. D.</div>
+    <ul class="choices"></ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 8 | Question 10</span>
+    <a class="qa-url" href="https://www.examtopics.com/discussions/google/view/12751-exam-professional-cloud-architect-topic-8-question-10/" target="_blank" rel="noopener">ExamTopics &#8599;</a>
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Your agricultural division is experimenting with fully autonomous vehicles. You want your architecture to promote strong security during vehicle operation. Which two architectures should you consider? (Choose two.)</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Treat every micro service call between modules on the vehicle as untrusted.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Require IPv6 for connectivity to ensure a secure address space.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Use a trusted platform module (TPM) and verify firmware and binaries on boot.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Use a functional programming language to isolate code execution cycles.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">E.Use multiple connectivity subsystems for redundancy.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">F.Enclose the vehicle&#x27;s drive electronics in a Faraday cage to isolate chips.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div></div>
+</div>
+<script>
+/* ── THEME ── */
+(function(){
+  var saved = localStorage.getItem('pca-theme') ||
+    (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+
+function toggleTheme(){
+  var next = document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('pca-theme', next);
+  var btn = document.getElementById('theme-label');
+  if(btn) btn.textContent = next==='dark' ? '☀️ Light mode' : '🌙 Dark mode';
+}
+
+/* ── FLASHCARDS ── */
+function flip(el){ el.classList.toggle('flipped'); }
+
+/* ── Q&A ── */
+var score = {correct:0, wrong:0};
+function updateStats(){
+  document.getElementById('s-correct').textContent = score.correct;
+  document.getElementById('s-wrong').textContent   = score.wrong;
+  document.getElementById('s-total').textContent   =
+    document.querySelectorAll('.qa-card').length;
+}
+
+function answer(btn, isCorrect){
+  var card = btn.closest('.qa-card');
+  if(card.dataset.answered) return;
+  card.dataset.answered = '1';
+  card.querySelectorAll('.choice').forEach(function(c){
+    if(c.dataset.correct==='1') c.classList.add('correct');
+    else if(c===btn) c.classList.add('wrong');
+  });
+  card.querySelector('.explanation').classList.add('visible');
+  if(isCorrect) score.correct++; else score.wrong++;
+  updateStats();
+}
+
+/* ── TABS ── */
+function switchTab(name){
+  document.querySelectorAll('.tab-btn').forEach(function(b){
+    b.classList.toggle('active', b.dataset.tab===name);
+  });
+  document.querySelectorAll('.tab-content').forEach(function(t){
+    t.classList.toggle('active', t.id==='tab-'+name);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  updateStats();
+  var btn = document.getElementById('theme-label');
+  if(btn){
+    var current = document.documentElement.getAttribute('data-theme');
+    btn.textContent = current==='dark' ? '☀️ Light mode' : '🌙 Dark mode';
+  }
+});
+</script>
+</body>
+</html>

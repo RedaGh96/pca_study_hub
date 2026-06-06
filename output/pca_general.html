@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PCA &ndash; GOVERNANCE, COST OPTIMIZATION, OPERATIONS &amp; MIGRATION</title>
+<style>
+/* ── THEME TOKENS ── */
+:root {
+  --bg:#0f1117;--surface:#1a1d27;--card:#1e2130;--border:#2e3250;
+  --accent:#4f8ef7;--green:#3ecf7c;--red:#f75f5f;--yellow:#f7c948;
+  --text:#e4e8f0;--muted:#7b8099;--radius:14px;
+  --shadow:0 8px 28px #0006;
+}
+[data-theme="light"] {
+  --bg:#f0f2f8;--surface:#ffffff;--card:#ffffff;--border:#d0d5e8;
+  --accent:#2563eb;--green:#16a34a;--red:#dc2626;--yellow:#ca8a04;
+  --text:#1e2130;--muted:#64748b;
+  --shadow:0 4px 20px #0001;
+}
+
+/* ── RESET ── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;
+  min-height:100vh;padding:2rem 1rem;transition:background .25s,color .25s}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;
+  max-width:1200px;margin:0 auto 1.5rem}
+h1{font-size:1.7rem;font-weight:700}
+.subtitle{text-align:center;color:var(--muted);font-size:.9rem;margin-bottom:2rem}
+
+/* ── THEME TOGGLE ── */
+.theme-toggle{display:flex;align-items:center;gap:.5rem;cursor:pointer;
+  background:var(--surface);border:1px solid var(--border);border-radius:99px;
+  padding:.35rem .9rem;font-size:.8rem;color:var(--muted);
+  transition:all .2s;user-select:none}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.toggle-track{width:36px;height:20px;border-radius:99px;background:var(--border);
+  position:relative;transition:background .25s}
+.toggle-thumb{width:14px;height:14px;border-radius:50%;background:#fff;
+  position:absolute;top:3px;left:3px;transition:transform .25s,background .25s;
+  box-shadow:0 1px 3px #0003}
+[data-theme="light"] .toggle-track{background:var(--accent)}
+[data-theme="light"] .toggle-thumb{transform:translateX(16px)}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:.5rem;justify-content:center;margin-bottom:2rem;flex-wrap:wrap}
+.tab-btn{padding:.5rem 1.4rem;border-radius:99px;border:2px solid var(--border);
+  background:transparent;color:var(--muted);cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.tab-content{display:none}.tab-content.active{display:block}
+
+/* ── FLASHCARDS ── */
+.deck-header{text-align:center;color:var(--muted);margin-bottom:1.5rem;font-size:.85rem}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.2rem}
+.flashcard{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.flashcard:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.card-header{display:flex;align-items:center;justify-content:space-between;
+  padding:.75rem 1rem;border-bottom:1px solid var(--border);background:var(--surface)}
+.card-title{font-weight:700;font-size:.95rem}
+.badge{font-size:.7rem;padding:.2rem .6rem;border-radius:99px;
+  background:var(--border);color:var(--accent)}
+.card-body{padding:1.1rem}
+.card-front p{font-size:.85rem;color:var(--muted);margin-bottom:.5rem}
+.card-front h3{font-size:1rem;font-weight:600;line-height:1.4}
+.card-back{display:none}
+.flashcard.flipped .card-front{display:none}
+.flashcard.flipped .card-back{display:block}
+.field{margin-bottom:.75rem}
+.field-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--accent);margin-bottom:.25rem}
+.field-value{font-size:.82rem;color:var(--text);line-height:1.5}
+.flip-hint{font-size:.7rem;color:var(--muted);text-align:right;margin-top:.6rem}
+.scenario-box{background:var(--surface);border-left:3px solid var(--yellow);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;margin-top:.5rem;font-size:.82rem}
+.answer-box{background:var(--surface);border-left:3px solid var(--green);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;margin-top:.4rem;font-size:.82rem}
+
+/* ── Q&A ── */
+.qa-grid{display:grid;gap:1.2rem}
+.qa-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.qa-header{display:flex;align-items:center;justify-content:space-between;
+  padding:.7rem 1rem;background:var(--surface);border-bottom:1px solid var(--border)}
+.qa-label{font-size:.8rem;font-weight:700;color:var(--accent)}
+.qa-url{font-size:.7rem;color:var(--muted);text-decoration:none}
+.qa-url:hover{color:var(--accent)}
+.qa-body{padding:1rem}
+.qa-question{font-size:.9rem;line-height:1.5;margin-bottom:.8rem;font-weight:500}
+.choices{list-style:none;display:grid;gap:.4rem}
+.choice{padding:.5rem .8rem;border-radius:8px;border:1px solid var(--border);
+  font-size:.82rem;cursor:pointer;transition:all .2s;user-select:none}
+.choice:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.choice.correct{background:color-mix(in srgb,var(--green) 12%,transparent);
+  border-color:var(--green);color:var(--green)}
+.choice.wrong{background:color-mix(in srgb,var(--red) 12%,transparent);
+  border-color:var(--red);color:var(--red)}
+.explanation{display:none;margin-top:.8rem;font-size:.82rem;line-height:1.5;
+  background:var(--surface);border-left:3px solid var(--accent);
+  border-radius:0 8px 8px 0;padding:.6rem .8rem;color:var(--muted)}
+.explanation.visible{display:block}
+
+/* ── STATS ── */
+.stats-bar{display:flex;gap:1rem;justify-content:center;margin-bottom:1.5rem;flex-wrap:wrap}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:.5rem 1.1rem;text-align:center;min-width:90px}
+.stat-num{font-size:1.4rem;font-weight:700}
+.stat-label{font-size:.7rem;color:var(--muted)}
+.stat.green .stat-num{color:var(--green)}
+.stat.red .stat-num{color:var(--red)}
+.stat.yellow .stat-num{color:var(--yellow)}
+</style>
+<script>
+(function(){
+  var t=localStorage.getItem('pca-theme')||
+    (window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');
+  document.documentElement.setAttribute('data-theme',t);
+})();
+</script>
+</head>
+<body>
+<div class="topbar">
+  <h1>PCA &mdash; GOVERNANCE, COST OPTIMIZATION, OPERATIONS &amp; MIGRATION</h1>
+  <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+    <span id="theme-label">&#9728;&#65039; Light mode</span>
+  </button>
+</div>
+<p class="subtitle">High-signal patterns for the PCA exam.</p>
+<div class="tabs"><button class="tab-btn active" data-tab="flashcards" onclick="switchTab('flashcards')">&#128218; Flashcards</button><button class="tab-btn" data-tab="exam-qa" onclick="switchTab('exam-qa')">&#129514; Exam Q&amp;A</button></div>
+
+<div id="tab-flashcards" class="tab-content active">
+  <p class="deck-header">Showing 17 cards &mdash; click to flip</p>
+  <div class="cards-grid">
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Committed Use Discounts</span>
+    <span class="badge">Cost Optimization</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Billing discount model where you commit to using a certain level of compute resources for one or three years in exchange for lower pricing.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Stable, predictable production workloads with known long-term resource consumption.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Early-stage products, uncertain demand, temporary workloads, and experimentation where future consumption is unknown.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Larger savings than sustained use discounts vs. reduced flexibility because you are committing to future usage.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Only use committed discounts when demand is predictable and long-lived. Using them too early can increase waste if the workload does not materialize as expected.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company knows a production application will consume a stable baseline of compute for several years and wants to optimize cost aggressively.</div><div class="answer-box">Use committed use discounts for the predictable baseline workload.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Free Tier Usage</span>
+    <span class="badge">Cost Optimization</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Limited no-cost usage available for certain Google Cloud services to help teams experiment, learn, and run small workloads economically.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Proofs of concept; learning environments; small startup trials; low-scale experimentation before demand is known.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Production workloads with meaningful scale or business-critical requirements that exceed free-tier limits.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Lowest possible entry cost vs. strict usage limits and unsuitability for larger production needs.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Free tier is useful for minimizing early cost, but teams must still monitor usage to avoid accidental spend after limits are exceeded. Governance and billing awareness are still required even in trial phases.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A small startup is validating product-market fit and wants to minimize cloud costs before customer demand is understood.</div><div class="answer-box">Start with free tier options where applicable to reduce initial spend.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cost Management Training</span>
+    <span class="badge">Cost Optimization</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Organizational practice of teaching teams how to control cloud spend through architecture choices, rightsizing, monitoring, and discount selection.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Growing teams adopting cloud services for the first time; organizations where engineers directly influence resource consumption and architecture cost.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Environments where cost is treated only as a centralized finance issue and engineering teams receive no accountability or visibility.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Broader cost awareness and better engineering decisions vs. time investment for education and process adoption.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Training helps teams avoid waste from oversized resources, unnecessary always-on services, and poor architectural choices. It is often more scalable than assigning all cost responsibility to a single person.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A manager wants startup cloud costs minimized while the team is still learning and future demand is uncertain.</div><div class="answer-box">Train the team on service cost management so cost responsibility is built into engineering decisions.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Single Organization with Multi-Project Separation</span>
+    <span class="badge">Governance</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Governance model where one Google Cloud organization contains multiple projects separated by environment, application, or stage.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Enterprises needing centralized identity management with clear separation between development, test, staging, and production resources.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Mixing all environments into one project when separation of duties, billing clarity, or security boundaries are required.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better security boundaries, IAM scoping, and billing isolation vs. more administrative structure and project management overhead.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Separate projects reduce blast radius and support least privilege by environment. This model also improves cost visibility and governance for production versus non-production workloads.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A security team requires least privilege and separation of duties between production and development resources.</div><div class="answer-box">Use a single organization and separate projects for each environment or stage of each application.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Environment Separation by Project</span>
+    <span class="badge">Governance</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Practice of placing development, test, staging, and production resources into distinct projects rather than combining them together.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Teams that need IAM isolation, independent billing views, safer testing, and controlled access to production.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Architectures that place all environments into one shared project, increasing the risk of accidental changes and permission sprawl.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Stronger governance and safer operations vs. more setup and cross-project coordination.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Environment separation supports least privilege, auditability, and reduced operational risk. Production projects should have tighter IAM and change control than development projects.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">Administrators need separate control of production and development resources while keeping centralized user management.</div><div class="answer-box">Create separate projects for production and non-production environments under one organization.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Least Privilege IAM</span>
+    <span class="badge">Governance</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Security model that grants identities only the minimum permissions required to perform their tasks.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">All cloud environments, especially production systems, regulated workloads, and organizations with multiple teams.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Broad owner or editor access granted for convenience, especially across environments with different sensitivity levels.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better security and reduced blast radius vs. more planning and role design effort.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Least privilege reduces the chance of accidental changes, privilege abuse, and compromise impact. It works best when combined with project separation and clear operational roles.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company mandates least privilege for all infrastructure and wants administration split between production and development.</div><div class="answer-box">Apply narrowly scoped IAM roles per project and environment rather than broad shared permissions.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Separation of Duties</span>
+    <span class="badge">Governance</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Administrative design principle where different teams or identities manage different responsibilities, such as development versus production administration.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Enterprises, regulated environments, and organizations that need stronger control over change management and operational risk.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">A single unrestricted admin model for all teams across all environments.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better control and auditability vs. more process overhead and cross-team coordination.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Separation of duties limits the risk of unauthorized or accidental production changes. It also strengthens compliance posture and helps enforce least privilege models.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">The security team requires separate administration boundaries between production resources and development resources.</div><div class="answer-box">Use separate projects and IAM boundaries so production and development administration are handled independently.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Explainable AI</span>
+    <span class="badge">AI / ML Governance</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Capability that helps users understand and interpret machine learning predictions by showing feature attribution and model reasoning signals.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">ML systems where prediction transparency, trust, debugging, and interpretability are important.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Use cases where only image recognition, notebook experimentation, or infrastructure monitoring is needed without model explanation.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better interpretability and stakeholder trust vs. some additional setup and analysis complexity.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Explainability improves governance of machine learning decisions, especially in sensitive or business-critical applications. It helps teams validate whether models rely on reasonable signals.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company wants better prediction accuracy from ML models and also wants business users to understand and interpret the predictions.</div><div class="answer-box">Use Explainable AI to improve transparency around model outputs.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Infrastructure Testing</span>
+    <span class="badge">Operations</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Testing practice that validates not only application code but also the deployed cloud infrastructure, configuration, and behavior of managed services.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Cloud-native systems where infrastructure definitions, permissions, networking, autoscaling, and service integrations are critical to application success.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Testing strategies that validate only application logic while assuming infrastructure will always behave correctly in production.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better end-to-end reliability and deployment confidence vs. more complex test design and operational effort.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Infrastructure testing can catch IAM, quota, networking, scaling, and deployment misconfigurations before production incidents occur. It is especially important in cloud environments where infrastructure is programmable and dynamic.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company is redesigning test coverage for a new cloud backend and wants to know what should differ from prior platform testing.</div><div class="answer-box">Include direct testing of the deployed cloud infrastructure, not just the application code.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Quota and Capacity Checks</span>
+    <span class="badge">Operations</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Operational practice of validating whether service quotas, API limits, or resource caps are preventing scaling or normal service behavior.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Troubleshooting situations where traffic grows suddenly and autoscaling or provisioning does not appear to work as expected.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Assuming every scaling problem is caused only by application bugs without first checking platform limits and backend health.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Fast elimination of platform-level constraints vs. the need for proactive monitoring and quota planning.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Quotas protect platforms from runaway consumption, but they can also block legitimate growth if not planned properly. Monitoring quotas is a key reliability practice for production systems.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A newly popular application feature causes traffic spikes, users see 503 errors, and the system is not scaling properly.</div><div class="answer-box">Investigate project quotas and scaling limits early in the troubleshooting process.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Backend Dependency Health</span>
+    <span class="badge">Operations</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Reliability practice of validating whether critical backend services such as databases are healthy and responsive during application incidents.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Multi-tier applications where frontend failures may actually originate from unavailable or overloaded backend dependencies.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Troubleshooting only the frontend tier while ignoring database, cache, or other shared dependencies.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Faster identification of root cause vs. requiring end-to-end observability across service dependencies.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Backend outages often present to users as timeouts or 503 errors even when web servers appear healthy. Monitoring backend health is essential to maintaining application reliability.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">Gaming servers are returning 503 errors and slow responses after a popular feature release.</div><div class="answer-box">Verify first that the database or other critical backend dependency is online and healthy.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Capacity Planning Changes in Cloud</span>
+    <span class="badge">Cloud Adoption</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Organizational shift where traditional hardware forecasting changes because cloud platforms provide elastic resource provisioning instead of fixed on-premises capacity.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Enterprises moving from data center infrastructure to public cloud operating models.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Organizations expecting cloud adoption to leave all infrastructure planning processes unchanged.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Less dependence on long-term hardware forecasting vs. greater need for quota awareness, financial governance, and architecture-based scaling decisions.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Cloud reduces the need for some traditional data center expansion planning, but organizations still need usage visibility and cost governance. Capacity planning becomes more dynamic and service-oriented.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A legacy enterprise is increasing Google Cloud adoption and wants to know which operational processes will change significantly.</div><div class="answer-box">Expect major changes in capacity planning because cloud resources are provisioned differently from physical infrastructure.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Opex vs Capex Shift</span>
+    <span class="badge">Cloud Adoption</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Financial transition from capital expenditure models for buying hardware to operational expenditure models based on ongoing cloud consumption.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Enterprises moving from owned infrastructure to public cloud services.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Assuming cloud economics behave like traditional up-front hardware procurement.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Greater financial flexibility and pay-as-you-go consumption vs. the need for stronger ongoing spend governance and forecasting discipline.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Cloud adoption usually changes procurement and finance processes significantly. Teams need better cost visibility, budget controls, and engineering cost awareness.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">An enterprise is modernizing its infrastructure strategy and wants to know which finance-related legacy process changes most with cloud adoption.</div><div class="answer-box">Opex versus capex allocation changes significantly in a cloud operating model.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Network Change Management in Cloud</span>
+    <span class="badge">Cloud Adoption</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Operational process for handling network changes in a cloud environment where networking is software-defined rather than physically provisioned.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Organizations moving from traditional LAN administration toward cloud-native network configuration and policy management.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Treating cloud networking exactly like on-premises physical network change processes.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Faster, more programmable network changes vs. greater need for policy discipline, IAM control, and infrastructure-as-code practices.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Cloud networking changes can be made quickly, which increases agility but also increases the need for governance and review. Security policies and separation of duties are critical in software-defined networks.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">An enterprise wants to know which infrastructure processes will be significantly affected by greater cloud adoption.</div><div class="answer-box">LAN and network change processes will change because cloud networking is managed differently from physical data center networks.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">First-Wave Migration Candidate Selection</span>
+    <span class="badge">Migration</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Strategy of choosing the easiest and lowest-risk applications as the first workloads to move to the cloud.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Organizations beginning cloud adoption and wanting early success with minimal complexity.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Starting with tightly coupled enterprise systems that have many internal dependencies and high migration risk.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Faster success and lower risk vs. potentially smaller immediate business impact than migrating the most complex systems first.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Early migration wins help teams build skills and confidence before handling complex workloads. Choose applications with limited dependencies and manageable risk profiles.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company wants to become familiar with cloud deployment by successfully moving some applications quickly with minimal redesign.</div><div class="answer-box">Select self-contained applications with limited dependencies as the first migration candidates.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Database-First Hybrid Migration</span>
+    <span class="badge">Migration</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Migration pattern where databases are moved to Google Cloud while some applications remain on-premises and continue to interact with them.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Transitional hybrid architectures; organizations seeking quick progress with manageable application changes; early modernization steps.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Situations where latency between on-premises apps and cloud databases would be unacceptable or where full application migration is immediately feasible and preferred.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Faster partial migration and early cloud adoption vs. hybrid complexity and possible latency or dependency issues.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Secure connectivity and latency analysis are essential when applications remain on-premises while data moves to the cloud. This approach can be useful as an incremental migration step when chosen carefully.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">A company wants to deploy applications to the cloud quickly, as-is, and one recommended first step is to move a shared backend dependency while on-premises apps continue using it.</div><div class="answer-box">Move appropriate in-house databases first as part of a hybrid migration approach where applications continue to access them.</div></div>
+    </div>
+  </div>
+</div>
+<div class="flashcard" onclick="flip(this)" tabindex="0"
+     onkeydown="if(event.key==='Enter')flip(this)">
+  <div class="card-header">
+    <span class="card-title">Cloud Adoption Process Modernization</span>
+    <span class="badge">Cloud Adoption</span>
+  </div>
+  <div class="card-body">
+    <div class="card-front">
+      <p class="field-label">What is it?</p>
+      <h3>Enterprise transformation pattern where technical, financial, and operational processes are updated to align with elastic infrastructure and managed services.</h3>
+      <p class="flip-hint">&#8617; click to reveal details</p>
+    </div>
+    <div class="card-back">
+      <div class="field">
+        <div class="field-label">&#9989; Best Fit</div>
+        <div class="field-value">Organizations increasing public cloud usage across multiple teams and needing to modernize governance and operations.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#10060; Not a Good Fit</div>
+        <div class="field-value">Treating cloud merely as rented hardware without changing organizational practices, controls, or engineering workflows.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#9878; Key Trade-off</div>
+        <div class="field-value">Better agility and cloud efficiency vs. the need for organizational change, training, and updated governance models.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">&#128176; Cost / Security</div>
+        <div class="field-value">Successful cloud adoption requires process changes in finance, operations, security, and architecture review. Teams that modernize their operating model gain more value than teams that simply move workloads unchanged.</div>
+      </div>
+      <div class="field"><div class="field-label">&#128161; Exam Scenario</div><div class="scenario-box">An enterprise is adopting Google Cloud more broadly and asks which internal processes will change as a result.</div><div class="answer-box">Expect changes across finance, capacity planning, network operations, and governance as part of cloud adoption process modernization.</div></div>
+    </div>
+  </div>
+</div></div>
+</div>
+
+<div id="tab-exam-qa" class="tab-content">
+  <div class="stats-bar">
+    <div class="stat green"><div class="stat-num" id="s-correct">0</div><div class="stat-label">Correct</div></div>
+    <div class="stat red"><div class="stat-num" id="s-wrong">0</div><div class="stat-label">Wrong</div></div>
+    <div class="stat yellow"><div class="stat-num" id="s-total">0</div><div class="stat-label">Total</div></div>
+  </div>
+  <div class="qa-grid">
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 1 | Question 44</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">You are analyzing and defining business processes to support your startup&#x27;s trial usage of GCP, and you don&#x27;t yet know what consumer demand for your product will be. Your manager requires you to minimize GCP service costs and adhere to Google best practices. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Utilize free tier and sustained use discounts. Provision a staff position for service cost management.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">B.Utilize free tier and sustained use discounts. Provide training to the team about service cost management.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Utilize free tier and committed use discounts. Provision a staff position for service cost management.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Utilize free tier and committed use discounts. Provide training to the team about service cost management.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 2 | Question 1</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">The JencoMart security team requires that all Google Cloud Platform infrastructure is deployed using a least privilege model with separation of duties for administration between production and development resources. What Google domain and project structure should you recommend?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Create two G Suite accounts to manage users: one for development/test/staging and one for production. Each account should contain one project for every application</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Create two G Suite accounts to manage users: one with a single project for all development applications and one with a single project for all production applications</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Create a single G Suite account to manage users with each stage of each application in its own project</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Create a single G Suite account to manage users with one project for the development/test/staging environment and one project for the production environment</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 3 | Question 4</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">For this question, refer to the Helicopter Racing League (HRL) case study. HRL wants better prediction accuracy from their ML prediction models. They want you to use Google&#x27;s AI Platform so HRL can understand and interpret the predictions. What should you do?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Use Explainable AI.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Use Vision AI.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Use Google Cloud&#x27;s operations suite.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Use Jupyter Notebooks.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 5 | Question 1</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Mountkirk Games wants you to design their new testing strategy. How should the test coverage differ from their existing backends on the other platforms?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Tests should scale well beyond the prior approaches</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Unit tests are no longer required, only end-to-end tests</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Tests should be applied after the release is in the production environment</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">D.Tests should include directly testing the Google Cloud Platform (GCP) infrastructure</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 5 | Question 4</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Mountkirk Games&#x27; gaming servers are not automatically scaling properly. Last month, they rolled out a new feature, which suddenly became very popular. A record number of users are trying to use the service, but many of them are getting 503 errors and very slow response times. What should they investigate first?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Verify that the database is online</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Verify that the project quota hasn&#x27;t been exceeded</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">C.Verify that the new feature code did not introduce any performance bugs</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Verify that the load-testing team is not running their tool against production</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 8 | Question 6</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Which of TerramEarth&#x27;s legacy enterprise processes will experience significant change as a result of increased Google Cloud Platform adoption?</div>
+    <ul class="choices"><li class="choice" data-correct="1" onclick="answer(this,true)">A.Opex/capex allocation, LAN changes, capacity planning</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Capacity planning, TCO calculations, opex/capex allocation</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Capacity planning, utilization measurement, data center expansion</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Data Center expansion, TCO calculations, utilization measurement</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div>
+<div class="qa-card">
+  <div class="qa-header">
+    <span class="qa-label">Topic 11 | Question 5</span>
+    
+  </div>
+  <div class="qa-body">
+    <div class="qa-question">Dress4Win would like to become familiar with deploying applications to the cloud by successfully deploying some applications quickly, as is. They have asked for your recommendation. What should you advise?</div>
+    <ul class="choices"><li class="choice" data-correct="0" onclick="answer(this,false)">A.Identify self-contained applications with external dependencies as a first move to the cloud.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">B.Identify enterprise applications with internal dependencies and recommend these as a first move to the cloud.</li>
+<li class="choice" data-correct="1" onclick="answer(this,true)">C.Suggest moving their in-house databases to the cloud and continue serving requests to on-premise applications.</li>
+<li class="choice" data-correct="0" onclick="answer(this,false)">D.Recommend moving their message queuing servers to the cloud and continue handling requests to on-premise applications.</li>
+</ul>
+    <div class="explanation"></div>
+  </div>
+</div></div>
+</div>
+<script>
+/* ── THEME ── */
+(function(){
+  var saved = localStorage.getItem('pca-theme') ||
+    (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+
+function toggleTheme(){
+  var next = document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('pca-theme', next);
+  var btn = document.getElementById('theme-label');
+  if(btn) btn.textContent = next==='dark' ? '☀️ Light mode' : '🌙 Dark mode';
+}
+
+/* ── FLASHCARDS ── */
+function flip(el){ el.classList.toggle('flipped'); }
+
+/* ── Q&A ── */
+var score = {correct:0, wrong:0};
+function updateStats(){
+  document.getElementById('s-correct').textContent = score.correct;
+  document.getElementById('s-wrong').textContent   = score.wrong;
+  document.getElementById('s-total').textContent   =
+    document.querySelectorAll('.qa-card').length;
+}
+
+function answer(btn, isCorrect){
+  var card = btn.closest('.qa-card');
+  if(card.dataset.answered) return;
+  card.dataset.answered = '1';
+  card.querySelectorAll('.choice').forEach(function(c){
+    if(c.dataset.correct==='1') c.classList.add('correct');
+    else if(c===btn) c.classList.add('wrong');
+  });
+  card.querySelector('.explanation').classList.add('visible');
+  if(isCorrect) score.correct++; else score.wrong++;
+  updateStats();
+}
+
+/* ── TABS ── */
+function switchTab(name){
+  document.querySelectorAll('.tab-btn').forEach(function(b){
+    b.classList.toggle('active', b.dataset.tab===name);
+  });
+  document.querySelectorAll('.tab-content').forEach(function(t){
+    t.classList.toggle('active', t.id==='tab-'+name);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  updateStats();
+  var btn = document.getElementById('theme-label');
+  if(btn){
+    var current = document.documentElement.getAttribute('data-theme');
+    btn.textContent = current==='dark' ? '☀️ Light mode' : '🌙 Dark mode';
+  }
+});
+</script>
+</body>
+</html>
